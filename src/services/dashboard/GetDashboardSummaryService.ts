@@ -1,5 +1,5 @@
 import { prisma } from '../../lib/prisma.js';
-import { getDevicesLastSeen, getOfflineThresholdMinutes, isRecent } from '../../lib/deviceStatus.js';
+import { getOfflineThresholdMinutes, isRecent } from '../../lib/deviceStatus.js';
 
 type ColdUnitStatus = 'NORMAL' | 'OUT_OF_RANGE' | 'NO_SIGNAL' | 'NO_DEVICE';
 
@@ -21,17 +21,16 @@ class GetDashboardSummaryService {
       include: {
         associations: {
           where: { endDate: null },
-          include: { device: { select: { id: true, macAddress: true } } }
+          include: { device: { select: { id: true, macAddress: true, lastSeenAt: true } } }
         }
       }
     });
 
     const coldUnitIds = coldUnits.map((coldUnit) => coldUnit.id);
-    const deviceIds = coldUnits.flatMap((coldUnit) => coldUnit.associations.map((item) => item.deviceId));
 
     // Última leitura de cada placa em cada unidade. Com várias placas, olhar só a
     // leitura mais recente da unidade esconderia uma placa fora dos limites.
-    const [latestReadings, pendingAlerts, lastSeen, quarantined] = await Promise.all([
+    const [latestReadings, pendingAlerts, quarantined] = await Promise.all([
       prisma.$queryRaw<LatestReadingRow[]>`
         SELECT DISTINCT ON (cold_unit_id, device_id)
           cold_unit_id AS "coldUnitId",
@@ -48,7 +47,6 @@ class GetDashboardSummaryService {
         where: { resolvedAt: null, coldUnitId: { in: coldUnitIds } },
         _count: { _all: true }
       }),
-      getDevicesLastSeen(deviceIds),
       prisma.unboundTelemetry.groupBy({
         by: ['deviceId'],
         where: { expiresAt: { gt: now }, device: { enterpriseId } }
@@ -59,7 +57,7 @@ class GetDashboardSummaryService {
       const { associations, ...unit } = coldUnit;
 
       const devices = associations.map(({ device }) => {
-        const lastSeenAt = lastSeen.get(device.id) ?? null;
+        const lastSeenAt = device.lastSeenAt;
         const row = latestReadings.find(
           (reading) => reading.coldUnitId === unit.id && reading.deviceId === device.id
         );

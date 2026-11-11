@@ -19,6 +19,11 @@ enum ColdUnitType {
   REEFER_TRUCK
 }
 
+enum AlertType {
+  OUT_OF_RANGE   // Temperatura fora dos limites da unidade
+  SENSOR_OFFLINE // Placa vinculada sem enviar dados há mais de SENSOR_OFFLINE_MINUTES
+}
+
 enum UserRole {
   MASTER
   ADMIN
@@ -92,12 +97,19 @@ model ColdUnitDevice {
   isActive   Boolean  @default(true) @map("is_active")
   createdAt  DateTime @default(now()) @map("created_at")
 
+  // SHA-256 da chave que a placa envia junto com as leituras. Nulo: a placa ainda não tem chave
+  // e seus dados são recusados. Fica fora das respostas (omit em src/lib/prisma.ts).
+  apiKeyHash String?   @map("api_key_hash")
+  // Hora de chegada da última mensagem aceita, inclusive store-and-forward e quarentena
+  lastSeenAt DateTime? @map("last_seen_at")
+
   enterpriseId String     @map("enterprise_id")
   enterprise   Enterprise @relation(fields: [enterpriseId], references: [id])
 
   associations      AssociationHistory[]
   readings          TemperatureReading[]
   unboundTelemetries UnboundTelemetry[]
+  alerts            Alert[]
 
   @@index([enterpriseId])
   @@map("cold_unit_devices")
@@ -134,8 +146,9 @@ model TemperatureReading {
   device       ColdUnitDevice    @relation(fields: [deviceId], references: [id])
   coldUnit     ColdUnit          @relation(fields: [coldUnitId], references: [id], onDelete: Cascade)
 
+  // Uma placa não mede duas vezes no mesmo instante: reenvios do store-and-forward são descartados
+  @@unique([deviceId, timestamp])
   @@index([coldUnitId, timestamp])
-  @@index([deviceId])
   @@map("temperature_readings")
 }
 
@@ -149,20 +162,32 @@ model UnboundTelemetry {
   deviceId     String         @map("device_id")
   device       ColdUnitDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
 
-  @@index([deviceId])
+  @@unique([deviceId, timestamp])
   @@index([expiresAt])
   @@map("unbound_telemetry")
 }
 
+// Episódio: leituras seguidas fora dos limites formam um único alerta, assim como um período sem sinal
 model Alert {
-  id           String    @id @default(uuid())
-  message      String
-  temperature  Float
-  resolvedAt   DateTime? @map("resolved_at")
-  createdAt    DateTime  @default(now()) @map("created_at")
+  id              String    @id @default(uuid())
+  type            AlertType @default(OUT_OF_RANGE)
+  message         String
+  temperature     Float?    // Leitura mais recente do episódio; nula em SENSOR_OFFLINE
+  peakTemperature Float?    @map("peak_temperature") // Leitura mais distante dos limites
+  readingsCount   Int       @default(1) @map("readings_count")
+  startedAt       DateTime  @map("started_at")
+  lastReadingAt   DateTime  @map("last_reading_at")
+  endedAt         DateTime? @map("ended_at") // Nulo enquanto a temperatura segue fora da faixa
+  resolvedAt      DateTime? @map("resolved_at") // Ação do operador
+  createdAt       DateTime  @default(now()) @map("created_at")
 
-  coldUnitId   String    @map("cold_unit_id")
-  coldUnit     ColdUnit  @relation(fields: [coldUnitId], references: [id], onDelete: Cascade)
+  coldUnitId      String    @map("cold_unit_id")
+  coldUnit        ColdUnit  @relation(fields: [coldUnitId], references: [id], onDelete: Cascade)
 
+  // Nulo só nos alertas anteriores aos episódios
+  deviceId        String?         @map("device_id")
+  device          ColdUnitDevice? @relation(fields: [deviceId], references: [id])
+
+  @@index([coldUnitId, deviceId, startedAt])
   @@map("alerts")
 }

@@ -1,72 +1,41 @@
-import { prisma } from '../../lib/prisma.js';
-import { ReadingSourceType } from '@prisma/client';
+import type { ReadingSourceType } from '@prisma/client';
+import type { TransactionClient } from '../../lib/prisma.js';
+import { applyReadingsToAlerts } from '../../lib/temperatureAlerts.js';
+import type { ColdUnitLimits, ReadingPoint } from '../../lib/temperatureAlerts.js';
 
 interface TelemetryRequest {
-  coldUnitId: string;
+  // Transação da ingestão, já com o lock da placa (lockDevice)
+  tx: TransactionClient;
+  coldUnit: ColdUnitLimits & { name: string };
   deviceId: string;
-  temperature: number;
   sourceType?: ReadingSourceType; // REALTIME ou HISTORICAL (Store & Forward)
-  timestamp?: Date;
-}
-
-interface ColdUnitLimits {
-  id: string;
-  minTemperature: number;
-  maxTemperature: number;
-}
-
-// REGRA DE NEGÓCIO: Verificação de Quebra da Cadeia de Frio. Retorna null se a temperatura estiver dentro dos limites.
-function buildTemperatureAlert(coldUnit: ColdUnitLimits, temperature: number) {
-  if (temperature >= coldUnit.minTemperature && temperature <= coldUnit.maxTemperature) {
-    return null;
-  }
-
-  const condition = temperature < coldUnit.minTemperature ? 'ABAIXO' : 'ACIMA';
-
-  return {
-    coldUnitId: coldUnit.id,
-    temperature,
-    message: `ALERTA CRÍTICO: Temperatura de ${temperature}°C registrada. Limite era ${coldUnit.minTemperature}°C a ${coldUnit.maxTemperature}°C. (${condition} DO PERMITIDO)`
-  };
+  readings: ReadingPoint[];
 }
 
 class CreateTemperatureReadingService {
-  async execute({ coldUnitId, deviceId, temperature, sourceType = 'REALTIME', timestamp }: TelemetryRequest) {
-
-    // 1. Busca os limites da câmara/caminhão no banco
-    const coldUnit = await prisma.coldUnit.findFirst({
-      where: {
-        id: coldUnitId,
-        isDeleted: false
-      }
-    });
-
-    if (!coldUnit) {
-      throw new Error("Unidade fria não encontrada ou desativada.");
-    }
-
-    // 2. Salva a telemetria no banco de dados
-    const reading = await prisma.temperatureReading.create({
-      data: {
-        coldUnitId,
+  // Retorna só as leituras gravadas: as repetidas (mesma placa e horário) ficam de fora
+  async execute({ tx, coldUnit, deviceId, sourceType = 'REALTIME', readings }: TelemetryRequest) {
+    // 1. Salva a telemetria. Um reenvio do store-and-forward é ignorado pelo índice único.
+    const inserted = await tx.temperatureReading.createManyAndReturn({
+      data: readings.map(({ temperature, timestamp }) => ({
+        coldUnitId: coldUnit.id,
         deviceId,
         temperature,
         sourceType,
-        timestamp: timestamp ? new Date(timestamp) : new Date()
-      }
+        timestamp
+      })),
+      skipDuplicates: true
     });
 
-    // 3. Gera o alerta atrelado à unidade, se a temperatura estiver fora dos limites
-    const alert = buildTemperatureAlert(coldUnit, temperature);
+    // 2. Abre ou atualiza os episódios de alerta, se houver leituras fora dos limites
+    const createdAlerts = await applyReadingsToAlerts(tx, coldUnit, deviceId, inserted);
 
-    if (alert) {
-      await prisma.alert.create({ data: alert });
-
-      console.log(`[ALERTA GERADO] Unidade: ${coldUnit.name} | Temp: ${temperature}°C`);
+    if (createdAlerts > 0) {
+      console.log(`[ALERTA GERADO] Unidade: ${coldUnit.name} | ${createdAlerts} novo(s) episódio(s)`);
     }
 
-    return reading;
+    return inserted;
   }
 }
 
-export { CreateTemperatureReadingService, buildTemperatureAlert };
+export { CreateTemperatureReadingService };

@@ -1,4 +1,5 @@
-import { prisma } from '../../lib/prisma.js'; 
+import { prisma } from '../../lib/prisma.js';
+import { publishEvent } from '../../lib/eventBus.js';
 
 interface ResolveAlertRequest {
   alertId: string;
@@ -24,15 +25,19 @@ class ResolveAlertService {
       throw new Error("Alerta não encontrado, já resolvido ou acesso negado.");
     }
 
-    // 2. Resolve o alerta se a validação passar
+    // 2. Resolve o alerta se a validação passar. Resolver também encerra o episódio:
+    // se a temperatura continuar fora da faixa, a próxima leitura abre um alerta novo.
     const resolvedAlert = await prisma.alert.update({
-      where: { 
-        id: alertId 
+      where: {
+        id: alertId
       },
-      data: { 
-        resolvedAt: new Date() 
+      data: {
+        resolvedAt: new Date(),
+        endedAt: alertExists.endedAt ?? alertExists.lastReadingAt
       }
     });
+
+    publishEvent({ type: 'alerts', enterpriseId, coldUnitIds: [resolvedAlert.coldUnitId] });
 
     return resolvedAlert;
   }

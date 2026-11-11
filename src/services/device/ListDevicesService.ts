@@ -1,5 +1,5 @@
 import { prisma } from '../../lib/prisma.js';
-import { getDevicesLastSeen, getOfflineThresholdMinutes, isRecent } from '../../lib/deviceStatus.js';
+import { getOfflineThresholdMinutes, isRecent } from '../../lib/deviceStatus.js';
 
 interface ListDevicesRequest {
   enterpriseId: string;
@@ -28,18 +28,11 @@ class ListDevicesService {
       }
     });
 
-    const lastSeen = await getDevicesLastSeen(devices.map((device) => device.id));
-
-    return devices.map((device) => {
-      const lastSeenAt = lastSeen.get(device.id) ?? null;
-
-      return {
-        ...device,
-        lastSeenAt,
-        isOnline: device.isActive && isRecent(lastSeenAt),
-        offlineThresholdMinutes: getOfflineThresholdMinutes()
-      };
-    });
+    return devices.map((device) => ({
+      ...device,
+      isOnline: device.isActive && isRecent(device.lastSeenAt),
+      offlineThresholdMinutes: getOfflineThresholdMinutes()
+    }));
   }
 }
 

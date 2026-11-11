@@ -5,6 +5,7 @@ import cors from 'cors';
 import { routes } from './routes/index.js';
 import { iniciarMQTTSubscriber } from './services/mqtt/mqttSubscriber.js';
 import { iniciarPurgeExpiredTelemetryJob } from './jobs/purgeExpiredTelemetry.js';
+import { iniciarDetectOfflineDevicesJob } from './jobs/detectOfflineDevices.js';
 
 const app = express();
 
@@ -29,3 +30,4 @@ app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
 
 iniciarMQTTSubscriber();
 iniciarPurgeExpiredTelemetryJob();
+iniciarDetectOfflineDevicesJob();

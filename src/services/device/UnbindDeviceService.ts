@@ -1,4 +1,5 @@
 import { prisma } from '../../lib/prisma.js';
+import { publishEvent } from '../../lib/eventBus.js';
 
 interface UnbindDeviceRequest {
   id: string;
@@ -19,6 +20,8 @@ class UnbindDeviceService {
     if (count === 0) {
       throw new Error("Vínculo ativo não encontrado para esta placa.");
     }
+
+    publishEvent({ type: 'devices', enterpriseId });
 
     return { message: "Placa desvinculada com sucesso." };
   }

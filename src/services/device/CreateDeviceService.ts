@@ -1,5 +1,6 @@
 import { prisma } from '../../lib/prisma.js';
 import { normalizeMacAddress } from '../../lib/macAddress.js';
+import { generateDeviceKey, hashDeviceKey } from '../../lib/deviceKey.js';
 
 interface CreateDeviceRequest {
   macAddress: string;
@@ -30,14 +31,18 @@ class CreateDeviceService {
       throw new Error("Já existe uma placa cadastrada com este MAC.");
     }
 
+    // A chave vai para o firmware e só aparece nesta resposta: o banco guarda apenas o hash
+    const deviceKey = generateDeviceKey();
+
     const device = await prisma.coldUnitDevice.create({
       data: {
         macAddress: normalizedMac,
-        enterpriseId
+        enterpriseId,
+        apiKeyHash: hashDeviceKey(deviceKey)
       }
     });
 
-    return device;
+    return { ...device, deviceKey };
   }
 }
 

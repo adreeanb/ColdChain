@@ -10,8 +10,8 @@ class ListUnboundDevicesService {
         device: { enterpriseId }
       },
       _count: { _all: true },
+      _min: { timestamp: true, expiresAt: true },
       _max: { timestamp: true },
-      _min: { expiresAt: true }
     });
 
     const devices = await prisma.coldUnitDevice.findMany({
@@ -23,6 +23,7 @@ class ListUnboundDevicesService {
       deviceId: item.deviceId,
       macAddress: devices.find((device) => device.id === item.deviceId)?.macAddress,
       pendingReadings: item._count._all,
+      firstReadingAt: item._min.timestamp,
       lastReadingAt: item._max.timestamp,
       nextExpirationAt: item._min.expiresAt
     }));

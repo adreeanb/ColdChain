@@ -47,11 +47,15 @@ import { BindDeviceController } from '../controllers/device/BindDeviceController
 import { UnbindDeviceController } from '../controllers/device/UnbindDeviceController.js';
 import { DeactivateDeviceController } from '../controllers/device/DeactivateDeviceController.js';
 import { ListDeviceAssociationsController } from '../controllers/device/ListDeviceAssociationsController.js';
+import { RotateDeviceKeyController } from '../controllers/device/RotateDeviceKeyController.js';
 
 // Telemetria (TemperatureReading)
 import { CreateTemperatureReadingController } from '../controllers/telemetry/CreateTemperatureReadingController.js';
 import { ListTemperatureReadingsController } from '../controllers/telemetry/ListTemperatureReadingsController.js';
 import { ListTemperatureSeriesController } from '../controllers/telemetry/ListTemperatureSeriesController.js';
+
+// Tempo real (Server-Sent Events)
+import { StreamEventsController } from '../controllers/events/StreamEventsController.js';
 
 // Alertas (Alert)
 import { ListAlertsController } from '../controllers/alert/ListAlertsController.js';
@@ -65,7 +69,7 @@ const authUserController = new AuthUserController();
 
 routes.post('/login', authUserController.handle);
 
-// Endpoint público/autenticado por Token IoT para os sensores/hardware enviarem dados
+// Endpoint dos sensores: sem JWT, autenticado pela chave da placa no header X-Device-Key
 const createTemperatureReadingController = new CreateTemperatureReadingController();
 routes.post('/telemetry/readings', createTemperatureReadingController.handle);
 
@@ -150,6 +154,7 @@ const bindDeviceController = new BindDeviceController();
 const unbindDeviceController = new UnbindDeviceController();
 const deactivateDeviceController = new DeactivateDeviceController();
 const listDeviceAssociationsController = new ListDeviceAssociationsController();
+const rotateDeviceKeyController = new RotateDeviceKeyController();
 
 routes.post('/devices', isAuthenticated, isMaster, createDeviceController.handle);
 routes.get('/devices', isAuthenticated, listDevicesController.handle);
@@ -158,6 +163,8 @@ routes.post('/devices/bind', isAuthenticated, bindDeviceController.handle);
 routes.post('/devices/:id/unbind', isAuthenticated, unbindDeviceController.handle);
 routes.patch('/devices/:id/deactivate', isAuthenticated, isMaster, deactivateDeviceController.handle);
 routes.get('/devices/:id/associations', isAuthenticated, listDeviceAssociationsController.handle);
+// Gera uma chave nova para o firmware; a anterior deixa de valer
+routes.post('/devices/:id/key', isAuthenticated, isMaster, rotateDeviceKeyController.handle);
 
 
 // ==========================================
@@ -180,5 +187,13 @@ const resolveAlertController = new ResolveAlertController();
 
 routes.get('/alerts', isAuthenticated, listAlertsController.handle);
 routes.patch('/alerts/:id/resolve', isAuthenticated, resolveAlertController.handle);
+
+// ==========================================
+// 8. TEMPO REAL
+// ==========================================
+const streamEventsController = new StreamEventsController();
+
+// Avisa as telas abertas quando chegam leituras ou mudam alertas e vínculos
+routes.get('/events', isAuthenticated, streamEventsController.handle);
 
 export { routes };

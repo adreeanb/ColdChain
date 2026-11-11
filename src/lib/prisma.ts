@@ -9,7 +9,8 @@ const pool = new pg.Pool({
 });
 
 const adapter = new PrismaPg(pool);
-const basePrisma = new PrismaClient({ adapter });
+// O hash da chave da placa nunca sai nas respostas. Quem precisa dele pede com omit: { apiKeyHash: false }.
+const basePrisma = new PrismaClient({ adapter, omit: { coldUnitDevice: { apiKeyHash: true } } });
 
 const SOFT_DELETE_MODELS = ['Enterprise', 'User', 'ColdUnit']
 
@@ -48,3 +49,6 @@ export const prisma = basePrisma.$extends({
     },
   },
 })
+
+// Cliente recebido dentro de prisma.$transaction(async (tx) => ...), com a extensão acima
+export type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]

@@ -53,6 +53,11 @@ class ListAlertsService {
               name: true,
               type: true
             }
+          },
+          device: {
+            select: {
+              macAddress: true
+            }
           }
         }
       }),

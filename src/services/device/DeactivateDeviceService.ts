@@ -1,4 +1,5 @@
 import { prisma } from '../../lib/prisma.js';
+import { publishEvent } from '../../lib/eventBus.js';
 
 class DeactivateDeviceService {
   async execute(id: string) {
@@ -18,6 +19,8 @@ class DeactivateDeviceService {
         data: { endDate: new Date() }
       })
     ]);
+
+    publishEvent({ type: 'devices', enterpriseId: device.enterpriseId });
 
     return deactivatedDevice;
   }
