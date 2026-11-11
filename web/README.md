@@ -1,10 +1,10 @@
 # ColdChain Monitor (web)
 
-Aplicação web responsiva para acompanhar temperaturas, tratar alertas e vincular placas ESP32 por QR Code. Consome a API do repositório `ColdChain_API`.
+Aplicação web responsiva para acompanhar temperaturas, tratar alertas e vincular placas ESP32 por QR Code. Consome a API da pasta `../api`.
 
 ## Como rodar
 
-1. Suba o banco e a API no repositório `ColdChain_API` (`docker compose up -d` e `npm run dev`).
+1. Suba o banco e a API em `../api` (`docker compose up -d` e `npm run dev`).
 2. Aqui, instale as dependências e crie o arquivo de ambiente:
 
    ```bash

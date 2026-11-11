@@ -22,11 +22,11 @@ O sistema atende várias empresas ao mesmo tempo, e cada usuário só enxerga os
 
 São três partes:
 
-| Parte | Repositório | Tecnologias |
+| Parte | Pasta | Tecnologias |
 |---|---|---|
-| Firmware | `ColdChain_API/firmware/main.txt` | ESP32, DallasTemperature, PubSubClient, ArduinoJson, SPIFFS, NTP |
-| API | `ColdChain_API` | Node.js, Express 5, Prisma 7, PostgreSQL 16, MQTT, JWT |
-| Web | `ColdChain_Web` | React 19, Vite, Tailwind, shadcn/ui, TanStack Query, Recharts, PWA |
+| Firmware | `firmware/` | ESP32, PlatformIO, DallasTemperature, PubSubClient, ArduinoJson, SPIFFS, NTP |
+| API | `api/` | Node.js, Express 5, Prisma 7, PostgreSQL 16, MQTT (Mosquitto), JWT |
+| Web | `web/` | React 19, Vite, Tailwind, shadcn/ui, TanStack Query, Recharts, PWA |
 
 ## Firmware (ESP32)
 
@@ -34,7 +34,7 @@ São três partes:
 - Identifica-se pelo **endereço MAC** da placa e assina cada mensagem com a **chave da placa**, gerada no cadastro: `{ key, temperatura, timestamp }`, com o horário em UTC obtido por NTP.
 - Publica no tópico `coldchain/devices/<MAC>/realtime` quando está conectada, num broker Mosquitto próprio com usuário e senha.
 - **Store-and-forward:** sem rede, grava as leituras na memória flash (SPIFFS). Quando a conexão volta, envia o histórico em lotes de 20 leituras por `coldchain/devices/<MAC>/historical`, sem travar as leituras ao vivo e preservando o horário original. Reenvios são ignorados pela API.
-- Credenciais de Wi-Fi, broker e chave ficam em `secrets.h`, fora do código.
+- Credenciais de Wi-Fi, broker e chave ficam em `include/secrets.h`, fora do código e do git.
 
 ## API (backend)
 
@@ -140,15 +140,22 @@ O TanStack Query busca os dados. Uma conexão de eventos (Server-Sent Events, `G
 ## Como executar
 
 ```bash
-# API (ColdChain_API)
-docker compose up -d          # PostgreSQL na porta 5433
+# API (pasta api/)
+cp .env.example .env          # ajuste senhas e segredos
+docker compose up -d          # PostgreSQL (porta 5433) e broker Mosquitto (1883)
+npm install
 npx prisma migrate dev        # cria as tabelas
 npx prisma db seed            # empresa base e usuário MASTER
 npm run dev                   # inicia a API
 
-# Web (ColdChain_Web)
+# Web (pasta web/)
+cp .env.example .env          # API_PROXY_TARGET com a porta da API
 npm install
 npm run dev                   # inicia o frontend; /api é encaminhado para a API
+
+# Firmware (pasta firmware/)
+cp include/secrets.example.h include/secrets.h   # Wi-Fi, broker e chave da placa
+pio run -t upload
 ```
 
-A API precisa de um `.env` com `DATABASE_URL`, `PORT`, `MQTT_BROKER_URL` e `JWT_SECRET`.
+As variáveis de cada parte estão em `api/.env.example`, `web/.env.example` e `firmware/include/secrets.example.h`.

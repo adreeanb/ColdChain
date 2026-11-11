@@ -1,0 +1,4 @@
+# Cada pasta (api/, web/, firmware/) tem o próprio .gitignore
+.DS_Store
+Thumbs.db
+.idea/

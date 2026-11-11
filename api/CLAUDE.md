@@ -22,7 +22,7 @@ There is no test runner or linter configured (`npm test` is a placeholder that e
 
 `.env` needs `DATABASE_URL`, `PORT`, `JWT_SECRET`, `MQTT_BROKER_URL`, `MQTT_USERNAME`/`MQTT_PASSWORD` (the API's broker account) and `MQTT_DEVICE_USERNAME`/`MQTT_DEVICE_PASSWORD` (the boards' shared account); see `.env.example`. The Mosquitto container regenerates its password and ACL files from these on every start (`mosquitto/entrypoint.sh`). Optional: `MQTT_CLIENT_ID` (default `coldchain-api`), `QUARANTINE_TTL_HOURS` (default 2), `SENSOR_OFFLINE_MINUTES` (default 10) and `CORS_ORIGINS` (comma-separated).
 
-The web client lives in the sibling repository `D:\Workspace\ColdChain_Web` and is its only consumer, so response shapes can change as long as both move together. Its Playwright suite starts this API from `../ColdChain_API`.
+This is the `api/` folder of the ColdChain monorepo. The web client in `../web` is its only consumer, so response shapes can change as long as both move together, in the same commit. Its Playwright suite starts this API from `../api`. The ESP32 firmware in `../firmware` is the other side of the MQTT topics and payloads, so changes there also move together.
 
 ## Architecture
 

@@ -3,7 +3,7 @@ import { defineConfig, devices } from '@playwright/test'
 const API_PORT = 3397
 const WEB_PORT = 5199
 
-// Sobe a API do repositório vizinho e o Vite em portas próprias. O broker aponta para uma
+// Sobe a API (../api) e o Vite em portas próprias. O broker aponta para uma
 // porta sem serviço: os testes usam a rota HTTP e nada é publicado no broker do .env.
 export default defineConfig({
   testDir: './e2e',
@@ -23,7 +23,7 @@ export default defineConfig({
   webServer: [
     {
       command: 'npx tsx src/server.ts',
-      cwd: '../ColdChain_API',
+      cwd: '../api',
       url: `http://localhost:${API_PORT}/alerts`,
       ignoreHTTPSErrors: true,
       reuseExistingServer: false,

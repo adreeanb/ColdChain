@@ -1,0 +1,7 @@
+.pio
+
+# Credenciais de Wi-Fi, broker e chave da placa
+include/secrets.h
+
+.vscode/*
+!.vscode/extensions.json

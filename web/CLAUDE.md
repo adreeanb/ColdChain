@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Web client (responsive, installable PWA) for the cold chain monitoring API in the sibling repository `../ColdChain_API`. Stack: Vite, React 19, TypeScript, Tailwind 4, shadcn/ui, TanStack Query, React Router, React Hook Form + Zod, Recharts, `@zxing/browser`. All interface text and code comments are in Portuguese; keep new ones consistent.
+Web client (responsive, installable PWA) for the cold chain monitoring API in `../api` (same monorepo; the ESP32 firmware is in `../firmware`). Stack: Vite, React 19, TypeScript, Tailwind 4, shadcn/ui, TanStack Query, React Router, React Hook Form + Zod, Recharts, `@zxing/browser`. All interface text and code comments are in Portuguese; keep new ones consistent.
 
 ## Commands
 
