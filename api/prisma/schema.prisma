@@ -1,0 +1,193 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+} 
+
+// ENUMS ===============
+
+enum ReadingSourceType {
+  REALTIME
+  HISTORICAL
+}
+
+enum ColdUnitType {
+  COLD_ROOM
+  COLD_STORAGE
+  REEFER_TRUCK
+}
+
+enum AlertType {
+  OUT_OF_RANGE   // Temperatura fora dos limites da unidade
+  SENSOR_OFFLINE // Placa vinculada sem enviar dados há mais de SENSOR_OFFLINE_MINUTES
+}
+
+enum UserRole {
+  MASTER
+  ADMIN
+  OPERATOR
+}
+
+// MODELS ==============================================
+
+model Enterprise {
+  id        String   @id @default(uuid())
+  name      String
+  cnpj      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  isDeleted Boolean  @default(false) @map("is_deleted")
+  
+  users     User[]
+  coldUnits ColdUnit[]
+  devices   ColdUnitDevice[]
+
+  @@map("enterprises")
+}
+
+model User {
+  id           String     @id @default(uuid())
+  name         String
+  email        String     @unique
+  password     String
+  role         UserRole   @default(OPERATOR)
+  isDeleted    Boolean    @default(false) @map("is_deleted")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  enterpriseId String     @map("enterprise_id")
+  enterprise   Enterprise @relation(fields: [enterpriseId], references: [id])
+
+  @@map("users")
+}
+
+// 1. Estrutura Monitorada
+model ColdUnit {
+  id              String       @id @default(uuid())
+  name            String
+  type            ColdUnitType
+  
+  minTemperature  Float        @map("min_temperature")
+  maxTemperature  Float        @map("max_temperature")
+  
+  licensePlate    String?      @map("license_plate") 
+  isFixedLocation Boolean      @default(false) @map("is_fixed_location")
+  location        String?      
+  
+  isDeleted       Boolean      @default(false) @map("is_deleted")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  enterpriseId    String       @map("enterprise_id")
+  enterprise      Enterprise   @relation(fields: [enterpriseId], references: [id])
+
+  readings        TemperatureReading[]
+  alerts          Alert[]
+  associations    AssociationHistory[]
+
+  @@map("cold_units")
+}
+
+// 2. O Hardware (Placa ESP32)
+model ColdUnitDevice {
+  id         String   @id @default(uuid())
+  macAddress String   @unique @map("mac_address")
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // SHA-256 da chave que a placa envia junto com as leituras. Nulo: a placa ainda não tem chave
+  // e seus dados são recusados. Fica fora das respostas (omit em src/lib/prisma.ts).
+  apiKeyHash String?   @map("api_key_hash")
+  // Hora de chegada da última mensagem aceita, inclusive store-and-forward e quarentena
+  lastSeenAt DateTime? @map("last_seen_at")
+
+  enterpriseId String     @map("enterprise_id")
+  enterprise   Enterprise @relation(fields: [enterpriseId], references: [id])
+
+  associations      AssociationHistory[]
+  readings          TemperatureReading[]
+  unboundTelemetries UnboundTelemetry[]
+  alerts            Alert[]
+
+  @@index([enterpriseId])
+  @@map("cold_unit_devices")
+}
+
+// 3. Tabela Pivot (O Vínculo Dinâmico)
+model AssociationHistory {
+  id           String    @id @default(uuid())
+  deviceId     String    @map("device_id")
+  coldUnitId   String    @map("cold_unit_id")
+  
+  startDate    DateTime  @default(now()) @map("start_date")
+  endDate      DateTime? @map("end_date") // Se nulo, é o vínculo atual/ativo
+
+  device       ColdUnitDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  coldUnit     ColdUnit       @relation(fields: [coldUnitId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId])
+  @@index([coldUnitId])
+  @@map("association_history")
+}
+
+// 4. Leituras Oficiais (Dados já vinculados)
+model TemperatureReading {
+  id           String            @id @default(uuid())
+  temperature  Float
+  sourceType   ReadingSourceType @default(REALTIME) @map("source_type")
+  timestamp    DateTime          @default(now())
+  createdAt    DateTime          @default(now()) @map("created_at")
+
+  deviceId     String            @map("device_id")
+  coldUnitId   String            @map("cold_unit_id")
+  
+  device       ColdUnitDevice    @relation(fields: [deviceId], references: [id])
+  coldUnit     ColdUnit          @relation(fields: [coldUnitId], references: [id], onDelete: Cascade)
+
+  // Uma placa não mede duas vezes no mesmo instante: reenvios do store-and-forward são descartados
+  @@unique([deviceId, timestamp])
+  @@index([coldUnitId, timestamp])
+  @@map("temperature_readings")
+}
+
+// 5. Buffer de Quarentena (Placa enviando dados sem vínculo no App)
+model UnboundTelemetry {
+  id           String         @id @default(uuid())
+  temperature  Float
+  timestamp    DateTime       @default(now())
+  expiresAt    DateTime       @map("expires_at") // Hora de chegada + prazo (padrão 2h) para o job limpar
+
+  deviceId     String         @map("device_id")
+  device       ColdUnitDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@unique([deviceId, timestamp])
+  @@index([expiresAt])
+  @@map("unbound_telemetry")
+}
+
+// Episódio: leituras seguidas fora dos limites formam um único alerta, assim como um período sem sinal
+model Alert {
+  id              String    @id @default(uuid())
+  type            AlertType @default(OUT_OF_RANGE)
+  message         String
+  temperature     Float?    // Leitura mais recente do episódio; nula em SENSOR_OFFLINE
+  peakTemperature Float?    @map("peak_temperature") // Leitura mais distante dos limites
+  readingsCount   Int       @default(1) @map("readings_count")
+  startedAt       DateTime  @map("started_at")
+  lastReadingAt   DateTime  @map("last_reading_at")
+  endedAt         DateTime? @map("ended_at") // Nulo enquanto a temperatura segue fora da faixa
+  resolvedAt      DateTime? @map("resolved_at") // Ação do operador
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  coldUnitId      String    @map("cold_unit_id")
+  coldUnit        ColdUnit  @relation(fields: [coldUnitId], references: [id], onDelete: Cascade)
+
+  // Nulo só nos alertas anteriores aos episódios
+  deviceId        String?         @map("device_id")
+  device          ColdUnitDevice? @relation(fields: [deviceId], references: [id])
+
+  @@index([coldUnitId, deviceId, startedAt])
+  @@map("alerts")
+}

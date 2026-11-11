@@ -1,0 +1,41 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: meu-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: senha_local_123
+      POSTGRES_DB: TCC_ColdChain_db
+
+    ports:
+      - "5433:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Broker MQTT próprio, com usuário e senha (as variáveis vêm do .env)
+  mosquitto:
+    image: eclipse-mosquitto:2.0.20
+    container_name: coldchain-mosquitto
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "/mosquitto/config/entrypoint.sh"]
+
+    environment:
+      MQTT_USERNAME: ${MQTT_USERNAME}
+      MQTT_PASSWORD: ${MQTT_PASSWORD}
+      MQTT_DEVICE_USERNAME: ${MQTT_DEVICE_USERNAME}
+      MQTT_DEVICE_PASSWORD: ${MQTT_DEVICE_PASSWORD}
+
+    ports:
+      - "1883:1883"
+
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./mosquitto/entrypoint.sh:/mosquitto/config/entrypoint.sh:ro
+      - mosquitto_data:/mosquitto/data
+
+volumes:
+  postgres_data:
+  mosquitto_data:
