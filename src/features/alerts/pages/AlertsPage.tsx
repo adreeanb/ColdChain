@@ -11,7 +11,7 @@ export default function AlertsPage() {
 
   return (
     <>
-      <PageHeader title="Alertas" description="Leituras fora dos limites configurados em cada unidade." />
+      <PageHeader title="Alertas" description="Períodos com a temperatura fora dos limites da unidade ou com uma placa sem sinal." />
       <AlertsPanel
         coldUnitId={coldUnitId || undefined}
         filters={

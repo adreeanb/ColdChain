@@ -1,5 +1,6 @@
-import { ArrowLeft, QrCode } from 'lucide-react'
+import { ArrowLeft, KeyRound, QrCode } from 'lucide-react'
 import { Link, useParams } from 'react-router'
+import { useAuth } from '@/features/auth'
 import { COLD_UNIT_TYPE_LABELS } from '@/shared/domain'
 import { formatDateTime } from '@/shared/lib/format'
 import { Badge } from '@/shared/ui/badge'
@@ -7,14 +8,17 @@ import { Button } from '@/shared/ui/button'
 import { ConfirmDialog } from '@/shared/ui/confirm-dialog'
 import { EmptyState, ErrorState, LoadingState, PageHeader } from '@/shared/ui/page'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
+import { DeviceKeyNotice } from '../components/DeviceKeyNotice'
 import { DeviceSignal } from '../components/DeviceSignal'
-import { useDeviceAssociations, useDevices, useUnbindDevice } from '../hooks'
+import { useDeviceAssociations, useDevices, useRotateDeviceKey, useUnbindDevice } from '../hooks'
 
 export default function DeviceDetailPage() {
   const { id = '' } = useParams()
   const devices = useDevices({ includeInactive: true })
   const associations = useDeviceAssociations(id)
   const unbind = useUnbindDevice()
+  const rotateKey = useRotateDeviceKey()
+  const { user } = useAuth()
 
   if (devices.isPending) return <LoadingState />
   if (devices.isError && !devices.data) return <ErrorState error={devices.error} onRetry={() => void devices.refetch()} />
@@ -64,10 +68,30 @@ export default function DeviceDetailPage() {
                   onConfirm={() => unbind.mutate(device.id)}
                 />
               )}
+              {user?.role === 'MASTER' && (
+                <ConfirmDialog
+                  trigger={
+                    <Button variant="outline">
+                      <KeyRound aria-hidden />
+                      Gerar nova chave
+                    </Button>
+                  }
+                  title="Gerar uma nova chave para esta placa?"
+                  description="A chave atual deixa de valer na hora: a placa só volta a enviar dados depois que a nova for gravada no firmware."
+                  confirmLabel="Gerar chave"
+                  onConfirm={() => rotateKey.mutate(device.id)}
+                />
+              )}
             </>
           )
         }
       />
+
+      {rotateKey.data && (
+        <div className="mb-6 max-w-2xl">
+          <DeviceKeyNotice {...rotateKey.data} />
+        </div>
+      )}
 
       <h2 className="mb-3 font-medium">Histórico de vínculos</h2>
       {associations.isPending ? (

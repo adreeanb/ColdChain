@@ -48,6 +48,22 @@ export function formatCountdown(value: string | Date, now = new Date()) {
   return rest ? `${hours} h ${rest} min` : `${hours} h`
 }
 
+export function formatDuration(from: string | Date, to: string | Date) {
+  const minutes = Math.floor((new Date(to).getTime() - new Date(from).getTime()) / 60000)
+
+  if (minutes < 1) return 'menos de 1 min'
+  if (minutes < 60) return `${minutes} min`
+
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) {
+    const rest = minutes % 60
+    return rest ? `${hours} h ${rest} min` : `${hours} h`
+  }
+
+  const days = Math.floor(hours / 24)
+  return days === 1 ? '1 dia' : `${days} dias`
+}
+
 // O QR Code pode trazer só o MAC ou um texto que o contenha. A validação final é da API.
 export function extractMacAddress(text: string) {
   const match = text.match(/(?<![0-9A-Fa-f])(?:[0-9A-Fa-f]{2}[:\-.]?){5}[0-9A-Fa-f]{2}(?![0-9A-Fa-f])/)

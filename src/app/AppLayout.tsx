@@ -3,12 +3,12 @@ import {
   Bell,
   Building2,
   Cpu,
+  CirclePlus,
   LayoutDashboard,
   LogOut,
   Menu,
   QrCode,
   ShieldQuestion,
-  Thermometer,
   UserRound,
   Users,
   Warehouse,
@@ -23,6 +23,7 @@ import { Button } from '@/shared/ui/button'
 import { LoadingState } from '@/shared/ui/page'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/shared/ui/sheet'
 import { Toaster } from '@/shared/ui/sonner'
+import { useLiveEvents } from './useLiveEvents'
 
 interface NavItem {
   to: string
@@ -39,6 +40,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/alertas', label: 'Alertas', icon: Bell, badge: 'alerts' },
   { to: '/vincular', label: 'Vincular placa', icon: QrCode },
   { to: '/placas', label: 'Placas', icon: Cpu, end: true },
+  { to: '/placas/cadastro', label: 'Cadastro de placas', icon: CirclePlus, roles: ['MASTER'] },
   { to: '/placas/quarentena', label: 'Quarentena', icon: ShieldQuestion },
   { to: '/usuarios', label: 'Usuários', icon: Users, roles: ['ADMIN', 'MASTER'] },
   { to: '/empresas', label: 'Empresas', icon: Building2, roles: ['MASTER'] },
@@ -88,16 +90,15 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
 function Brand() {
   return (
     <span className="flex items-center gap-2 font-semibold">
-      <span className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-        <Thermometer aria-hidden className="size-4" />
-      </span>
-      ColdChain
+      <img src="/logo.png" alt="" className="size-7 object-contain" />
+      TCColdChain
     </span>
   )
 }
 
 export function AppLayout() {
   const [menuOpen, setMenuOpen] = useState(false)
+  useLiveEvents()
 
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[15rem_1fr]">

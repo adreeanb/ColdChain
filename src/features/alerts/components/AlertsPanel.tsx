@@ -1,14 +1,33 @@
 import { useState } from 'react'
-import { CircleCheck, TriangleAlert } from 'lucide-react'
+import { CircleCheck, TriangleAlert, WifiOff } from 'lucide-react'
 import { Link } from 'react-router'
-import { formatDateTime, formatTemperature } from '@/shared/lib/format'
+import { formatDateTime, formatDuration, formatTemperature } from '@/shared/lib/format'
 import { Button } from '@/shared/ui/button'
 import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/page'
 import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { useAlerts, useResolveAlert } from '../hooks'
-import type { AlertStatusFilter } from '../types'
+import type { AlertStatusFilter, TemperatureAlert } from '../types'
 
 const PAGE_SIZE = 20
+
+function AlertDetails({ alert }: { alert: TemperatureAlert }) {
+  const parts: string[] = []
+
+  if (alert.device) parts.push(alert.device.macAddress)
+
+  if (alert.type === 'SENSOR_OFFLINE') {
+    parts.push(`Sem dados desde ${formatDateTime(alert.startedAt)}`)
+  } else {
+    if (alert.peakTemperature !== null) parts.push(`Pico de ${formatTemperature(alert.peakTemperature)}`)
+    parts.push(alert.readingsCount === 1 ? '1 leitura' : `${alert.readingsCount} leituras`)
+    parts.push(`Desde ${formatDateTime(alert.startedAt)}`)
+  }
+
+  parts.push(alert.endedAt ? `Durou ${formatDuration(alert.startedAt, alert.endedAt)}` : 'Em andamento')
+  if (alert.resolvedAt) parts.push(`Resolvido em ${formatDateTime(alert.resolvedAt)}`)
+
+  return <>{parts.map((part) => ` · ${part}`).join('')}</>
+}
 
 export function AlertsPanel({ coldUnitId, filters }: { coldUnitId?: string | undefined; filters?: React.ReactNode }) {
   const [status, setStatus] = useState<AlertStatusFilter>('pending')
@@ -60,6 +79,8 @@ export function AlertsPanel({ coldUnitId, filters }: { coldUnitId?: string | und
               <li key={alert.id} className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3">
                 {alert.resolvedAt ? (
                   <CircleCheck aria-hidden className="size-5 shrink-0 text-status-good" />
+                ) : alert.type === 'SENSOR_OFFLINE' ? (
+                  <WifiOff aria-hidden className="size-5 shrink-0 text-status-critical" />
                 ) : (
                   <TriangleAlert aria-hidden className="size-5 shrink-0 text-status-critical" />
                 )}
@@ -69,8 +90,7 @@ export function AlertsPanel({ coldUnitId, filters }: { coldUnitId?: string | und
                     <Link to={`/unidades/${alert.coldUnitId}`} className="underline-offset-2 hover:underline">
                       {alert.coldUnit.name}
                     </Link>
-                    {` · ${formatTemperature(alert.temperature)} · ${formatDateTime(alert.createdAt)}`}
-                    {alert.resolvedAt && ` · Resolvido em ${formatDateTime(alert.resolvedAt)}`}
+                    <AlertDetails alert={alert} />
                   </p>
                 </div>
                 {!alert.resolvedAt && (

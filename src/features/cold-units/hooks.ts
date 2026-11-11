@@ -2,7 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { toast } from 'sonner'
 import { SUMMARY_KEY } from '@/features/dashboard'
 import { getErrorMessage } from '@/shared/api/client'
-import { CHART_POLL_MS } from '@/shared/polling'
+import { CHART_POLL_MS, pollInterval } from '@/shared/polling'
 import * as coldUnitsApi from './api'
 import type { ColdUnitInput } from './types'
 
@@ -62,7 +62,7 @@ export function useTemperatureSeries(id: string, rangeMinutes: number, bucketMin
       return { buckets, start: start.getTime(), end: end.getTime() }
     },
     placeholderData: keepPreviousData,
-    refetchInterval: CHART_POLL_MS,
+    refetchInterval: pollInterval(CHART_POLL_MS),
   })
 }
 
@@ -71,7 +71,7 @@ export function useReadings(id: string, deviceId: string | undefined) {
     queryKey: ['cold-units', id, 'readings', deviceId],
     queryFn: () => coldUnitsApi.listReadings(id, { limit: 100, deviceId }),
     placeholderData: keepPreviousData,
-    refetchInterval: CHART_POLL_MS,
+    refetchInterval: pollInterval(CHART_POLL_MS),
   })
 }
 

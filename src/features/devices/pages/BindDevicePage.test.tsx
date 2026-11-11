@@ -12,8 +12,15 @@ const units = [
   { id: 'u2', name: 'Caminhão 2' },
 ]
 
-function mockApi(currentUnit?: { id: string; name: string }) {
+function mockApi(currentUnit?: { id: string; name: string }, pendingReadings = 0) {
   server.use(
+    http.get(`${API}/devices/unbound`, () =>
+      HttpResponse.json(
+        pendingReadings
+          ? [{ deviceId: 'd1', macAddress: MAC, pendingReadings, firstReadingAt: '2026-11-08T10:00:00Z', lastReadingAt: '2026-11-08T11:00:00Z', nextExpirationAt: '2026-11-08T12:00:00Z' }]
+          : [],
+      ),
+    ),
     http.get(`${API}/me`, () => HttpResponse.json({ id: '1', name: 'Ana', email: 'a@a.com', role: 'OPERATOR', enterpriseId: 'e1', createdAt: '' })),
     http.get(`${API}/cold-units`, () => HttpResponse.json(units)),
     http.get(`${API}/devices`, () =>
@@ -49,7 +56,7 @@ describe('BindDevicePage', () => {
     server.use(
       http.post(`${API}/devices/bind`, async ({ request }) => {
         body = await request.json()
-        return HttpResponse.json({ association: { id: 'a', coldUnitId: 'u1', startDate: '' }, recoveredReadings: 12 }, { status: 201 })
+        return HttpResponse.json({ association: { id: 'a', coldUnitId: 'u1', startDate: '' }, recoveredReadings: 12, discardedReadings: 0 }, { status: 201 })
       }),
     )
     const user = userEvent.setup()
@@ -61,7 +68,28 @@ describe('BindDevicePage', () => {
     await user.click(confirm)
 
     expect(await screen.findByText(/12 leituras da quarentena foram recuperadas/)).toBeInTheDocument()
-    expect(body).toEqual({ macAddress: MAC, coldUnitId: 'u1' })
+    expect(body).toEqual({ macAddress: MAC, coldUnitId: 'u1', quarantine: 'recover' })
+  })
+
+  it('permite descartar a quarentena de uma placa que mediu fora da unidade', async () => {
+    mockApi(undefined, 30)
+    let body: unknown
+    server.use(
+      http.post(`${API}/devices/bind`, async ({ request }) => {
+        body = await request.json()
+        return HttpResponse.json({ association: { id: 'a', coldUnitId: 'u1', startDate: '' }, recoveredReadings: 0, discardedReadings: 30 }, { status: 201 })
+      }),
+    )
+    const user = userEvent.setup()
+    renderRoutes(routes, `/vincular?mac=${encodeURIComponent(MAC)}&unidade=u1`)
+
+    expect(await screen.findByText(/enviou 30 leituras sem vínculo/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/Recuperar para esta unidade/)).toBeChecked()
+    await user.click(screen.getByLabelText(/Descartar/))
+    await user.click(screen.getByRole('button', { name: 'Confirmar vínculo' }))
+
+    expect(await screen.findByText('30 leituras da quarentena foram descartadas.')).toBeInTheDocument()
+    expect(body).toEqual({ macAddress: MAC, coldUnitId: 'u1', quarantine: 'discard' })
   })
 
   it('avisa quando a placa está em outra unidade', async () => {
@@ -74,7 +102,7 @@ describe('BindDevicePage', () => {
 
   it('não avisa ao reescanear na mesma unidade e informa que já estava vinculada', async () => {
     mockApi({ id: 'u1', name: 'Câmara 1' })
-    server.use(http.post(`${API}/devices/bind`, () => HttpResponse.json({ association: { id: 'a', coldUnitId: 'u1', startDate: '' }, recoveredReadings: 0 }, { status: 201 })))
+    server.use(http.post(`${API}/devices/bind`, () => HttpResponse.json({ association: { id: 'a', coldUnitId: 'u1', startDate: '' }, recoveredReadings: 0, discardedReadings: 0 }, { status: 201 })))
     const user = userEvent.setup()
     renderRoutes(routes, `/vincular?mac=${encodeURIComponent(MAC)}&unidade=u1`)
     const confirm = await screen.findByRole('button', { name: 'Confirmar vínculo' })

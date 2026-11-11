@@ -50,9 +50,9 @@
   :root {
     color-scheme: dark;
 
-    --background: #0d0d0d;
+    --background: #101325;
     --foreground: #f0efec;
-    --card: #1a1a19;
+    --card: #171a2c;
     --card-foreground: #f0efec;
     --popover: #1a1a19;
     --popover-foreground: #f0efec;

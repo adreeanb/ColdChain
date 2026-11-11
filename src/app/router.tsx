@@ -15,6 +15,7 @@ const BindDevicePage = lazy(() => import('@/features/devices/pages/BindDevicePag
 const DevicesPage = lazy(() => import('@/features/devices/pages/DevicesPage'))
 const DeviceDetailPage = lazy(() => import('@/features/devices/pages/DeviceDetailPage'))
 const QuarantinePage = lazy(() => import('@/features/devices/pages/QuarantinePage'))
+const RegisterDevicePage = lazy(() => import('@/features/devices/pages/RegisterDevicePage'))
 const UsersPage = lazy(() => import('@/features/users/pages/UsersPage'))
 const EnterprisesPage = lazy(() => import('@/features/enterprises/pages/EnterprisesPage'))
 const EnterpriseDetailPage = lazy(() => import('@/features/enterprises/pages/EnterpriseDetailPage'))
@@ -63,6 +64,7 @@ export const router = createBrowserRouter([
             children: [
               { path: 'empresas', element: <EnterprisesPage /> },
               { path: 'empresas/:id', element: <EnterpriseDetailPage /> },
+              { path: 'placas/cadastro', element: <RegisterDevicePage /> },
             ],
           },
           { path: '*', element: <NotFoundPage /> },

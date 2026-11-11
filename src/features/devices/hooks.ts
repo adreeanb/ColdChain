@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { SUMMARY_KEY } from '@/features/dashboard'
 import { getErrorMessage } from '@/shared/api/client'
-import { SUMMARY_POLL_MS } from '@/shared/polling'
+import { SUMMARY_POLL_MS, pollInterval } from '@/shared/polling'
 import * as devicesApi from './api'
 
 function useInvalidateDevices() {
@@ -20,7 +20,7 @@ export function useDevices(params: { enterpriseId?: string | undefined; includeI
   return useQuery({
     queryKey: ['devices', 'list', params],
     queryFn: () => devicesApi.listDevices(params),
-    refetchInterval: SUMMARY_POLL_MS,
+    refetchInterval: pollInterval(SUMMARY_POLL_MS),
   })
 }
 
@@ -28,7 +28,7 @@ export function useUnboundDevices() {
   return useQuery({
     queryKey: ['devices', 'unbound'],
     queryFn: devicesApi.listUnboundDevices,
-    refetchInterval: SUMMARY_POLL_MS,
+    refetchInterval: pollInterval(SUMMARY_POLL_MS),
   })
 }
 
@@ -67,6 +67,13 @@ export function useCreateDevice() {
       invalidate()
       toast.success('Placa cadastrada.')
     },
+    // O erro aparece no próprio formulário
+  })
+}
+
+export function useRotateDeviceKey() {
+  return useMutation({
+    mutationFn: devicesApi.rotateDeviceKey,
     onError: (error) => toast.error(getErrorMessage(error)),
   })
 }

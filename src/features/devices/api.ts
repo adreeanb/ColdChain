@@ -1,5 +1,5 @@
 import { api } from '@/shared/api/client'
-import type { BindResult, Device, DeviceAssociation, UnboundDevice } from './types'
+import type { BindInput, BindResult, Device, DeviceAssociation, DeviceKey, UnboundDevice } from './types'
 
 export async function listDevices(params: { enterpriseId?: string | undefined; includeInactive?: boolean }) {
   const { data } = await api.get<Device[]>('/devices', { params })
@@ -17,11 +17,16 @@ export async function listDeviceAssociations(id: string) {
 }
 
 export async function createDevice(input: { macAddress: string; enterpriseId: string }) {
-  const { data } = await api.post<Device>('/devices', input)
+  const { data } = await api.post<Device & DeviceKey>('/devices', input)
   return data
 }
 
-export async function bindDevice(input: { macAddress: string; coldUnitId: string }) {
+export async function rotateDeviceKey(id: string) {
+  const { data } = await api.post<DeviceKey>(`/devices/${id}/key`)
+  return data
+}
+
+export async function bindDevice(input: BindInput) {
   const { data } = await api.post<BindResult>('/devices/bind', input)
   return data
 }

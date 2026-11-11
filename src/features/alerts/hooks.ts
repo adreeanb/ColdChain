@@ -2,7 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { toast } from 'sonner'
 import { SUMMARY_KEY } from '@/features/dashboard'
 import { getErrorMessage } from '@/shared/api/client'
-import { ALERTS_COUNT_POLL_MS } from '@/shared/polling'
+import { ALERTS_COUNT_POLL_MS, pollInterval } from '@/shared/polling'
 import { listAlerts, resolveAlert } from './api'
 import type { AlertsParams } from './types'
 
@@ -13,7 +13,7 @@ export function useAlerts(params: AlertsParams) {
     queryKey: [ALERTS_KEY, params],
     queryFn: () => listAlerts(params),
     placeholderData: keepPreviousData,
-    refetchInterval: ALERTS_COUNT_POLL_MS,
+    refetchInterval: pollInterval(ALERTS_COUNT_POLL_MS),
   })
 }
 
@@ -21,7 +21,7 @@ export function usePendingAlertsCount() {
   const { data } = useQuery({
     queryKey: [ALERTS_KEY, 'pending-count'],
     queryFn: () => listAlerts({ status: 'pending', pageSize: 1 }),
-    refetchInterval: ALERTS_COUNT_POLL_MS,
+    refetchInterval: pollInterval(ALERTS_COUNT_POLL_MS),
   })
 
   return data?.total ?? 0

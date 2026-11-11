@@ -1,5 +1,6 @@
-import { QrCode, ShieldQuestion } from 'lucide-react'
+import { CirclePlus, QrCode, ShieldQuestion } from 'lucide-react'
 import { Link } from 'react-router'
+import { useAuth } from '@/features/auth'
 import { Button } from '@/shared/ui/button'
 import { EmptyState, ErrorState, LoadingState, PageHeader } from '@/shared/ui/page'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
@@ -7,6 +8,7 @@ import { DeviceSignal } from '../components/DeviceSignal'
 import { useDevices } from '../hooks'
 
 export default function DevicesPage() {
+  const { user } = useAuth()
   const devices = useDevices()
 
   return (
@@ -16,6 +18,14 @@ export default function DevicesPage() {
         description="Sensores ESP32 da sua empresa."
         actions={
           <>
+            {user?.role === 'MASTER' && (
+              <Button asChild variant="outline">
+                <Link to="/placas/cadastro">
+                  <CirclePlus aria-hidden />
+                  Cadastrar placa
+                </Link>
+              </Button>
+            )}
             <Button asChild variant="outline">
               <Link to="/placas/quarentena">
                 <ShieldQuestion aria-hidden />

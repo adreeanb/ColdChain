@@ -15,6 +15,9 @@ const UNIT = 'Câmara E2E'
 // Os 6 últimos dígitos do relógio mantêm o MAC único a cada execução
 const MAC = `E2:E2:E2:${String(run).slice(-6).match(/.{2}/g)!.join(':')}`
 
+// Mostrada uma única vez no cadastro da placa e usada pelas leituras enviadas pela API
+let deviceKey = ''
+
 const nav = (page: Page) => page.getByRole('navigation', { name: 'Principal' })
 
 async function login(page: Page, email: string, password: string) {
@@ -27,7 +30,7 @@ async function login(page: Page, email: string, password: string) {
 
 async function logout(page: Page) {
   await page.getByRole('button', { name: 'Sair' }).click()
-  await expect(page.getByRole('heading', { name: 'Entrar' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Bem-vindo de volta' })).toBeVisible()
 }
 
 test.describe.serial('fluxo completo', () => {
@@ -49,10 +52,20 @@ test.describe.serial('fluxo completo', () => {
     await page.getByRole('button', { name: 'Salvar' }).click()
     await expect(page.getByRole('cell', { name: ADMIN_EMAIL })).toBeVisible()
 
-    await page.getByRole('tab', { name: 'Placas' }).click()
-    await page.getByRole('button', { name: 'Cadastrar placa' }).click()
+    // Cadastro pela tela própria do MASTER
+    await nav(page).getByRole('link', { name: 'Cadastro de placas' }).click()
+    await page.getByLabel('Empresa dona da placa').selectOption({ label: ENTERPRISE })
     await page.getByLabel('Endereço MAC').fill(MAC.toLowerCase())
-    await page.getByRole('button', { name: 'Cadastrar', exact: true }).click()
+    await page.getByRole('button', { name: 'Cadastrar placa' }).click()
+    await expect(page.getByRole('cell', { name: MAC })).toBeVisible()
+    await expect(page.getByLabel('Endereço MAC')).toHaveValue('')
+    deviceKey = (await page.getByLabel('Chave da placa').textContent()) ?? ''
+    expect(deviceKey).toMatch(/^ck_/)
+
+    // A aba da empresa mostra a mesma placa
+    await nav(page).getByRole('link', { name: 'Empresas' }).click()
+    await page.getByRole('link', { name: ENTERPRISE }).click()
+    await page.getByRole('tab', { name: 'Placas' }).click()
     await expect(page.getByRole('cell', { name: MAC })).toBeVisible()
 
     await logout(page)
@@ -61,6 +74,7 @@ test.describe.serial('fluxo completo', () => {
   test('ADMIN cria a unidade e um OPERATOR', async ({ page }) => {
     await login(page, ADMIN_EMAIL, PASSWORD)
     await expect(nav(page).getByRole('link', { name: 'Empresas' })).toHaveCount(0)
+    await expect(nav(page).getByRole('link', { name: 'Cadastro de placas' })).toHaveCount(0)
 
     await nav(page).getByRole('link', { name: 'Unidades' }).click()
     await page.getByRole('button', { name: 'Nova unidade' }).click()
@@ -88,7 +102,12 @@ test.describe.serial('fluxo completo', () => {
 
   test('OPERATOR vincula pela quarentena, vê o alerta e o resolve', async ({ page, request }) => {
     // A placa sem vínculo envia dados: vão para a quarentena
-    const quarantined = await request.post('/api/telemetry/readings', { data: { macAddress: MAC, temperature: 3.5 } })
+    // Sem a chave da placa, ninguém envia leituras em nome dela
+    const forged = await request.post('/api/telemetry/readings', { data: { macAddress: MAC, temperature: 30 } })
+    expect(forged.status()).toBe(401)
+
+    const headers = { 'X-Device-Key': deviceKey }
+    const quarantined = await request.post('/api/telemetry/readings', { headers, data: { macAddress: MAC, temperature: 3.5 } })
     expect(quarantined.status()).toBe(202)
 
     await login(page, OPERATOR_EMAIL, PASSWORD)
@@ -96,6 +115,9 @@ test.describe.serial('fluxo completo', () => {
     // O OPERATOR não administra
     await expect(nav(page).getByRole('link', { name: 'Usuários' })).toHaveCount(0)
     await page.goto('/usuarios')
+    await expect(page.getByRole('heading', { name: 'Acesso negado' })).toBeVisible()
+    await expect(nav(page).getByRole('link', { name: 'Cadastro de placas' })).toHaveCount(0)
+    await page.goto('/placas/cadastro')
     await expect(page.getByRole('heading', { name: 'Acesso negado' })).toBeVisible()
 
     await page.goto('/')
@@ -108,14 +130,27 @@ test.describe.serial('fluxo completo', () => {
     await page.getByRole('button', { name: 'Confirmar vínculo' }).click()
     await expect(page.getByText('1 leitura da quarentena foi recuperada para esta unidade.')).toBeVisible()
 
-    // Com o vínculo, a leitura vira oficial e, fora da faixa, gera alerta
-    const official = await request.post('/api/telemetry/readings', { data: { macAddress: MAC, temperature: 20 } })
-    expect(official.status()).toBe(201)
-
+    // Painel aberto com o stream de eventos conectado
+    const stream = page.waitForResponse((response) => response.url().endsWith('/api/events'))
     await page.goto('/')
+    await stream
     const card = page.getByRole('link', { name: new RegExp(UNIT) })
-    await expect(card.getByText('Fora dos limites')).toBeVisible()
-    await expect(card.getByText('1 alerta pendente')).toBeVisible()
+    await expect(card).toBeVisible()
+    await expect(card.getByText('Fora dos limites')).toHaveCount(0)
+
+    // Com o vínculo, um lote do store-and-forward fora da faixa vira um único alerta, e o reenvio é ignorado.
+    // Os horários ficam depois do início do vínculo (a leitura recuperada) para não voltar à quarentena.
+    const now = Date.now()
+    const batch = [20, 21, 22].map((temperature, index) => ({ temperature, timestamp: new Date(now - (3 - index) * 1000).toISOString() }))
+    const official = await request.post('/api/telemetry/readings', { headers, data: { macAddress: MAC, sourceType: 'HISTORICAL', readings: batch } })
+    expect(official.status()).toBe(201)
+    const resent = await request.post('/api/telemetry/readings', { headers, data: { macAddress: MAC, sourceType: 'HISTORICAL', readings: batch } })
+    expect(resent.status()).toBe(200)
+    expect(await resent.json()).toEqual({ stored: 0, quarantined: 0, duplicates: 3 })
+
+    // Sem recarregar: o aviso do stream chega antes do polling (15 s)
+    await expect(card.getByText('Fora dos limites')).toBeVisible({ timeout: 5000 })
+    await expect(card.getByText('1 alerta pendente')).toBeVisible({ timeout: 5000 })
     await expect(page.getByText('1 placa enviando dados sem vínculo')).toHaveCount(0)
 
     // Detalhe: gráfico, leitura recuperada na tabela e vínculo ativo
@@ -125,8 +160,8 @@ test.describe.serial('fluxo completo', () => {
     await expect(page.locator('.recharts-line-dots circle').first()).toBeAttached()
 
     await page.getByRole('tab', { name: 'Leituras' }).click()
-    await expect(page.getByText('Recuperada')).toBeVisible()
-    await expect(page.getByText('fora da faixa')).toBeVisible()
+    await expect(page.getByText('Recuperada').first()).toBeVisible()
+    await expect(page.getByText('fora da faixa').first()).toBeVisible()
 
     await page.getByRole('tab', { name: 'Placas e vínculos' }).click()
     await expect(page.getByText('Ativo')).toBeVisible()
@@ -145,7 +180,7 @@ test.describe.serial('fluxo completo', () => {
     await login(page, OPERATOR_EMAIL, PASSWORD)
     await page.evaluate(() => localStorage.setItem('coldchain.token', 'invalido'))
     await page.goto('/alertas')
-    await expect(page.getByRole('heading', { name: 'Entrar' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Bem-vindo de volta' })).toBeVisible()
     await page.getByLabel('E-mail').fill(OPERATOR_EMAIL)
     await page.getByLabel('Senha').fill(PASSWORD)
     await page.getByRole('button', { name: 'Entrar' }).click()
@@ -163,7 +198,9 @@ test.describe.serial('fluxo completo', () => {
 
     for (const path of ['/', '/unidades', unitPath, '/alertas', '/vincular', '/placas', '/placas/quarentena', '/perfil']) {
       await page.goto(path)
-      await page.waitForLoadState('networkidle')
+      // Não dá para esperar networkidle: o stream de eventos (GET /events) fica aberto de propósito
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+      await expect(page.getByText('Carregando...')).toHaveCount(0)
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
       expect(overflow, `rolagem horizontal em ${path}`).toBeLessThanOrEqual(0)
     }

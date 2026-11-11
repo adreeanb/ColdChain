@@ -26,7 +26,7 @@ export default defineConfig(({ mode }) => {
       ...(env.DEV_HTTPS === 'true' ? [basicSsl()] : []),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['favicon.svg'],
+        includeAssets: ['favicon.png', 'logo.png'],
         manifest: {
           name: 'ColdChain Monitor',
           short_name: 'ColdChain',
@@ -34,7 +34,7 @@ export default defineConfig(({ mode }) => {
           lang: 'pt-BR',
           display: 'standalone',
           start_url: '/',
-          theme_color: '#0f172a',
+          theme_color: '#256abf',
           background_color: '#f9f9f7',
           icons: [
             { src: 'pwa-192.png', sizes: '192x192', type: 'image/png' },
