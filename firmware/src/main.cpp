@@ -6,8 +6,6 @@
 #include <SPIFFS.h>
 #include <ArduinoJson.h>
 #include <time.h>
-
-// Wi-Fi, broker e chave da placa ficam fora do código (copie secrets.example.h para secrets.h)
 #include "secrets.h"
 
 const int oneWireBus = 4;
