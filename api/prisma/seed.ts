@@ -1,14 +1,31 @@
+import 'dotenv/config'
 import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 
-// Verifica se a variável de ambiente existe para evitar erros de tipagem
-if (!process.env.DATABASE_URL) {
-  throw new Error("A variável de ambiente DATABASE_URL não está definida.");
+const MIN_PASSWORD_LENGTH = 8
+// Senhas de exemplo ou triviais que nunca podem criar o MASTER
+const FORBIDDEN_PASSWORDS = new Set(['123456', '12345678', 'troque-esta-senha-do-master'])
+
+function requiredEnv(name: string) {
+  const value = process.env[name]
+  if (!value) {
+    throw new Error(`A variável de ambiente ${name} não está definida.`)
+  }
+  return value
 }
 
-// Configura o adaptador com a string de conexão
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
+const databaseUrl = requiredEnv('DATABASE_URL')
+// O MASTER vem do .env: nada de credenciais fixas no repositório
+const masterName = process.env.SEED_MASTER_NAME || 'Administrador'
+const masterEmail = requiredEnv('SEED_MASTER_EMAIL')
+const masterPassword = requiredEnv('SEED_MASTER_PASSWORD')
+
+if (masterPassword.length < MIN_PASSWORD_LENGTH || FORBIDDEN_PASSWORDS.has(masterPassword)) {
+  throw new Error(`SEED_MASTER_PASSWORD fraca: use pelo menos ${MIN_PASSWORD_LENGTH} caracteres e não deixe o valor do .env.example.`)
+}
+
+const adapter = new PrismaPg({ connectionString: databaseUrl })
 const prisma = new PrismaClient({ adapter })
 
 async function main() {
@@ -25,22 +42,20 @@ async function main() {
   });
   console.log(`✅ Empresa criada: ${enterprise.name}`);
 
-  // 2. Criptografa a senha padrão
-  const hashedPassword = await bcrypt.hash('123456', 8);
-
-  // 3. Cria o usuário MASTER associado à empresa
+  // 2. Cria o usuário MASTER associado à empresa. Se o e-mail já existir, nada muda
+  // (nem a senha): para trocar, use a tela de perfil.
   const masterUser = await prisma.user.upsert({
-    where: { email: 'adrian@teste.com' },
+    where: { email: masterEmail },
     update: {},
     create: {
-      name: 'Adrian Barros',
-      email: 'adrian@teste.com',
-      password: hashedPassword,
+      name: masterName,
+      email: masterEmail,
+      password: await bcrypt.hash(masterPassword, 10),
       role: 'MASTER',
       enterpriseId: enterprise.id,
     },
   });
-  console.log(`✅ Usuário MASTER criado: ${masterUser.email} (Senha: 123456)`);
+  console.log(`✅ Usuário MASTER: ${masterUser.email}`);
 }
 
 main()

@@ -7,13 +7,15 @@ services:
     container_name: meu-postgres
     restart: unless-stopped
 
+    # Credenciais do .env: nada de senha fixa no repositório
     environment:
-      POSTGRES_USER: appuser
-      POSTGRES_PASSWORD: senha_local_123
-      POSTGRES_DB: TCC_ColdChain_db
+      POSTGRES_USER: ${POSTGRES_USER:?Defina POSTGRES_USER no .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no .env}
+      POSTGRES_DB: ${POSTGRES_DB:?Defina POSTGRES_DB no .env}
 
+    # Só nesta máquina: o banco nunca fica exposto na rede
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
 
     volumes:
       - postgres_data:/var/lib/postgresql/data

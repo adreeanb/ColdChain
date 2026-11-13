@@ -15,7 +15,7 @@ npm run build       # type check and production build, including the service wor
 npm run lint        # oxlint
 npm test            # Vitest with MSW
 npx vitest run src/shared/lib/format.test.ts   # a single test file
-npm run test:e2e    # Playwright: starts the API and Vite on their own ports, needs Docker Postgres and the seeded MASTER
+npm run test:e2e    # Playwright: starts the API and Vite on their own ports, needs Docker Postgres and the seeded MASTER (`E2E_MASTER_EMAIL`/`E2E_MASTER_PASSWORD`, defaulting to the API's `.env.example` values)
 ```
 
 The e2e suite creates enterprises named `e2e-*` and does not delete them.

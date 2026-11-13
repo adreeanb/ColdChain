@@ -1,8 +1,8 @@
 import { expect, test, type Page } from '@playwright/test'
 
-// Usuário MASTER criado pelo seed da API
-const MASTER_EMAIL = process.env.E2E_MASTER_EMAIL ?? 'adrian@teste.com'
-const MASTER_PASSWORD = process.env.E2E_MASTER_PASSWORD ?? '123456'
+// Usuário MASTER criado pelo seed da API (SEED_MASTER_* do .env da API). O padrão é o do .env.example.
+const MASTER_EMAIL = process.env.E2E_MASTER_EMAIL ?? 'master@coldchain.local'
+const MASTER_PASSWORD = process.env.E2E_MASTER_PASSWORD ?? 'troque-esta-senha-do-master'
 
 // Prefixo reconhecido pela limpeza dos dados de teste
 const run = Date.now()

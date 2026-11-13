@@ -6,6 +6,7 @@ import { Router } from 'express';
 import { isAuthenticated } from '../middlewares/isAuthenticated.js';
 import { isMaster } from '../middlewares/isMaster.js';
 import { isAdmin } from '../middlewares/isAdmin.js';
+import { loginRateLimit, telemetryRateLimit } from '../middlewares/rateLimit.js';
 
 // ==========================================
 // CONTROLLERS
@@ -67,11 +68,11 @@ const routes = Router();
 // ==========================================
 const authUserController = new AuthUserController();
 
-routes.post('/login', authUserController.handle);
+routes.post('/login', loginRateLimit, authUserController.handle);
 
 // Endpoint dos sensores: sem JWT, autenticado pela chave da placa no header X-Device-Key
 const createTemperatureReadingController = new CreateTemperatureReadingController();
-routes.post('/telemetry/readings', createTemperatureReadingController.handle);
+routes.post('/telemetry/readings', telemetryRateLimit, createTemperatureReadingController.handle);
 
 
 // ==========================================

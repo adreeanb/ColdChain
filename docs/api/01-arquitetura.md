@@ -47,7 +47,7 @@ O compose tem nome fixo (`name: coldchain_api`), para que os volumes não mudem 
 
 | Serviço | Imagem | Porta | Função |
 |---|---|---|---|
-| `postgres` (`meu-postgres`) | `postgres:16` | 5433 → 5432 | Banco de dados |
+| `postgres` (`meu-postgres`) | `postgres:16` | 127.0.0.1:5433 → 5432 (só a máquina local) | Banco de dados; usuário, senha e nome vêm de `POSTGRES_*` no `.env` |
 | `mosquitto` (`coldchain-mosquitto`) | `eclipse-mosquitto:2.0.20` | 1883 | Broker MQTT |
 
 O broker não aceita conexões anônimas. A cada início, `mosquitto/entrypoint.sh` gera o arquivo de senhas e a ACL a partir do `.env`:
@@ -63,9 +63,11 @@ O broker não aceita conexões anônimas. A cada início, `mosquitto/entrypoint.
 
 ```mermaid
 flowchart TD
-    A[tsx src/server.ts] --> B[Cria app Express]
-    B --> C[CORS<br/>origens de CORS_ORIGINS ou<br/>localhost:5173 e 192.168.1.77:5173]
-    C --> D[express.json]
+    A[tsx src/server.ts] --> V[validateEnv<br/>carrega e confere o .env]
+    V --> B[Cria app Express<br/>sem X-Powered-By, trust proxy por TRUST_PROXY]
+    B --> HM[helmet<br/>headers de segurança]
+    HM --> C[CORS<br/>origens de CORS_ORIGINS ou<br/>localhost:5173]
+    C --> D[express.json<br/>limite de 100 KB]
     D --> E[app.use routes]
     E --> F[app.listen PORT ou 3334]
     F --> G[iniciarMQTTSubscriber]
@@ -76,14 +78,16 @@ flowchart TD
     I -.-> I1[Verifica placas sem sinal agora e a cada 1 minuto]
 ```
 
-1. Cria a aplicação Express.
-2. Configura o CORS com `credentials: true` e os métodos `GET, POST, PUT, DELETE, PATCH`. As origens vêm de `CORS_ORIGINS` (separadas por vírgula) ou, na ausência, `http://localhost:5173` e `http://192.168.1.77:5173`.
-3. Habilita o parser JSON e registra as rotas.
-4. Sobe o servidor HTTP na porta `PORT` (padrão 3334).
-5. Inicia o assinante MQTT (ver [Telemetria](08-telemetria.md)).
-6. Inicia os jobs de limpeza da quarentena e de placas sem sinal (ver [Jobs](11-jobs-e-soft-delete.md)).
+1. Carrega o `.env` e o valida (`src/config/env.ts`). Faltar `DATABASE_URL` ou `JWT_SECRET` impede o início. Com `NODE_ENV=production`, também impedem: `JWT_SECRET` com menos de 32 caracteres, `CORS_ORIGINS` ausente, credenciais MQTT ausentes e senhas iguais às do `.env.example`. Em desenvolvimento esses casos só geram avisos.
+2. Cria a aplicação Express, desliga o header `X-Powered-By` e, com `TRUST_PROXY` definido, confia nesse número de proxies reversos para obter o IP do cliente.
+3. Aplica o `helmet` (headers de segurança, como `Strict-Transport-Security` e `X-Content-Type-Options`).
+4. Configura o CORS com `credentials: true` e os métodos `GET, POST, PUT, DELETE, PATCH`. As origens vêm de `CORS_ORIGINS` (separadas por vírgula) ou, na ausência, apenas `http://localhost:5173`.
+5. Habilita o parser JSON com limite de 100 KB (corpo maior recebe 413) e registra as rotas. O limite de requisições por IP (`src/middlewares/rateLimit.ts`) vale para `POST /login` (10 falhas a cada 15 minutos) e `POST /telemetry/readings` (600 por minuto); acima disso, 429.
+6. Sobe o servidor HTTP na porta `PORT` (padrão 3334).
+7. Inicia o assinante MQTT (ver [Telemetria](08-telemetria.md)).
+8. Inicia os jobs de limpeza da quarentena e de placas sem sinal (ver [Jobs](11-jobs-e-soft-delete.md)).
 
-O carregamento do `.env` acontece em `src/lib/prisma.ts` (`import 'dotenv/config'`), importado indiretamente pelas rotas antes de qualquer leitura de `process.env`.
+O carregamento do `.env` acontece em `src/config/env.ts` (`import 'dotenv/config'`), o primeiro import de `src/server.ts`. `src/lib/prisma.ts` também o importa, para scripts que usam o cliente sem passar pelo servidor.
 
 ## Conexão com o banco (`src/lib/prisma.ts`)
 

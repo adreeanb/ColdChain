@@ -32,7 +32,7 @@ npm test            # unidade e integração
 npm run test:e2e    # fluxo completo; na primeira vez, rode npx playwright install chromium
 ```
 
-O teste de ponta a ponta usa a API e o Postgres locais e cria empresas com o nome `e2e-*`, que não são apagadas ao final.
+O teste de ponta a ponta usa a API e o Postgres locais e cria empresas com o nome `e2e-*`, que não são apagadas ao final. Ele entra com o MASTER do seed: se o seu não for o do `.env.example` da API, defina `E2E_MASTER_EMAIL` e `E2E_MASTER_PASSWORD`.
 
 ## Produção
 

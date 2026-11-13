@@ -93,16 +93,21 @@ Variáveis do `.env`:
 |---|---|---|
 | `DATABASE_URL` | Sim | Conexão com o PostgreSQL |
 | `PORT` | Não (padrão 3334) | Porta HTTP |
-| `JWT_SECRET` | Sim | Assinatura dos tokens |
-| `MQTT_BROKER_URL` | Não (padrão `mqtt://localhost:1883`) | Broker MQTT |
+| `NODE_ENV` | Não | `production` torna obrigatórios os itens marcados com "Produção" e recusa valores do `.env.example` |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | Sim (docker compose) | Criam o banco no container; `DATABASE_URL` usa os mesmos valores |
+| `JWT_SECRET` | Sim | Assinatura dos tokens. Em produção, pelo menos 32 caracteres (`openssl rand -base64 48`) |
+| `MQTT_BROKER_URL` | Produção (padrão `mqtt://localhost:1883`) | Broker MQTT |
 | `MQTT_USERNAME` / `MQTT_PASSWORD` | Sim | Conta da API no broker (só leitura) |
 | `MQTT_DEVICE_USERNAME` / `MQTT_DEVICE_PASSWORD` | Sim | Conta compartilhada das placas no broker (só publicação) |
 | `MQTT_CLIENT_ID` | Não (padrão `coldchain-api`) | Id fixo da sessão persistente da API no broker |
 | `QUARANTINE_TTL_HOURS` | Não (padrão 2) | Validade dos dados em quarentena |
 | `SENSOR_OFFLINE_MINUTES` | Não (padrão 10) | Silêncio que deixa a placa offline e intervalo que separa episódios de alerta |
-| `CORS_ORIGINS` | Não | Origens permitidas, separadas por vírgula |
+| `CORS_ORIGINS` | Produção (padrão `http://localhost:5173`) | Origens permitidas, separadas por vírgula |
+| `TRUST_PROXY` | Não | Número de proxies reversos à frente da API (ex.: `1`), para o limite de requisições ver o IP do cliente |
+| `SEED_MASTER_EMAIL` / `SEED_MASTER_PASSWORD` | Só no seed | MASTER criado pelo seed; senha com pelo menos 8 caracteres |
+| `SEED_MASTER_NAME` | Não (padrão `Administrador`) | Nome do MASTER criado pelo seed |
 
-O seed (`prisma/seed.ts`) cria, de forma idempotente (`upsert`), a empresa **CTech - Cold Chain Logistics** (CNPJ `00000000000191`) e o usuário MASTER `adrian@teste.com` com senha `123456`.
+O seed (`prisma/seed.ts`) cria, de forma idempotente (`upsert`), a empresa **CTech - Cold Chain Logistics** (CNPJ `00000000000191`) e o usuário MASTER com `SEED_MASTER_EMAIL` e `SEED_MASTER_PASSWORD` do `.env`. Ele recusa senhas com menos de 8 caracteres ou iguais à do exemplo. Se o e-mail já existir, nada é alterado; troque a senha pela tela de perfil.
 
 ## Visão geral do fluxo
 
