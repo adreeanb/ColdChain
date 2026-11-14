@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { ResolveAlertService } from '../../services/alert/ResolveAlertService.js';
+import { sendError } from '../../lib/httpError.js';
 
 class ResolveAlertController {
   async handle(req: Request, res: Response) {
@@ -30,7 +31,7 @@ class ResolveAlertController {
       return res.json(alert);
     } catch (error: any) {
       // Se o alerta não existir ou não pertencer à empresa, o service joga um erro e cai aqui
-      return res.status(400).json({ error: error.message });
+      return sendError(res, 400, error);
     }
   }
 }

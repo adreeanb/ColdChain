@@ -39,6 +39,7 @@ O código fica em `api/` neste monorepo; o firmware, em `firmware/`. A visão ge
 
 | Método | Rota | Middlewares | Quem pode |
 |---|---|---|---|
+| GET | `/health` | — | Público (estado do banco e do MQTT) |
 | POST | `/login` | — | Público |
 | POST | `/telemetry/readings` | — (header `X-Device-Key`) | Placa com chave válida |
 | GET | `/me` | isAuthenticated | Todos |
@@ -86,6 +87,10 @@ npx prisma migrate dev      # aplica as migrations
 npx prisma db seed          # cria a empresa base e o usuário MASTER
 npm run dev                 # tsx watch src/server.ts
 ```
+
+Em produção: `npm run build` (gera o cliente Prisma e compila para `dist/`), `npm run migrate:deploy` e `npm start`. O passo a passo da publicação (Render, Supabase e EMQX Cloud Serverless) está em [DEPLOY.md](../DEPLOY.md).
+
+`GET /health` é público e responde `{ status, database, mqtt }`: `200` com o banco no ar (`status` é `ok` ou, sem MQTT, `degraded`) e `503` sem banco.
 
 Variáveis do `.env`:
 

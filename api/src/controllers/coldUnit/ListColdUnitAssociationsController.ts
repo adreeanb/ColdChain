@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { ListColdUnitAssociationsService } from '../../services/coldUnit/ListColdUnitAssociationsService.js';
+import { sendError } from '../../lib/httpError.js';
 
 class ListColdUnitAssociationsController {
   async handle(req: Request, res: Response) {
@@ -15,7 +16,7 @@ class ListColdUnitAssociationsController {
       const associations = await listColdUnitAssociationsService.execute({ id, enterpriseId: req.user.enterpriseId });
       return res.json(associations);
     } catch (error: any) {
-      return res.status(404).json({ error: error.message });
+      return sendError(res, 404, error);
     }
   }
 }

@@ -8,7 +8,6 @@ Pontos observados no código que estão incompletos, inconsistentes ou que repre
 |---|---|
 | `src/app.ts` e `src/config/auth.ts` vazios | A aplicação é montada inteira em `src/server.ts` |
 | `req.user` declarado duas vezes | `src/@types/express/index.d.ts` (completo e obrigatório) e `src/types/express.d.ts` (opcional, só `enterpriseId`). Por isso alguns controllers checam `if (!req.user)` e outros não |
-| Sem tratador global de erros | `app.use(errorHandler)` está comentado; cada controller trata os próprios erros, com status variando entre 400, 404 e 500 para situações parecidas |
 | Sem testes automatizados na API | `npm test` apenas encerra com erro. A regra de episódios (`planAlertEpisodes`) é pura e seria a primeira candidata a testes. O web tem testes unitários e um teste de ponta a ponta que sobe a API |
 | `prisma generate` manual | O `postinstall` não gera o cliente: depois de `npm install` é preciso rodar `npx prisma generate` |
 | Mensagens de erro em inglês | Alguns controllers de unidade e empresa retornam `'Invalid cold unit ID'` / `'Invalid enterprise ID'`, fora do padrão em português |
@@ -18,9 +17,10 @@ Pontos observados no código que estão incompletos, inconsistentes ou que repre
 | Ponto | Detalhe |
 |---|---|
 | Conta MQTT compartilhada | Todas as placas usam o mesmo usuário do broker, que pode publicar em qualquer `coldchain/devices/#`. A chave por placa impede dados falsos, mas uma placa comprometida poderia inundar o tópico de outra (as mensagens seriam recusadas pela API, com custo de processamento) |
-| Broker sem TLS | Usuário, senha e chave da placa trafegam em texto na rede local (porta 1883) |
+| Broker local sem TLS | No desenvolvimento (Mosquitto, porta 1883), usuário, senha e chave da placa trafegam em texto na rede local. Em produção (EMQX Cloud Serverless) o TLS é obrigatório |
+| Cota do broker gerenciado | A EMQX Serverless gratuita comporta cerca de 6 placas (1 GB de tráfego/mês) e para o broker ao esgotar a cota se não houver limite de gasto |
+| Senha do portal compartilhada | A rede de configuração `ColdChain-XXXXXX` usa a mesma senha em todas as placas. Ela só abre na primeira ligação ou com o botão BOOT segurado, e nunca mostra a chave atual |
 | Token não revalidado | O JWT não é conferido com o banco: usuário excluído ou com papel alterado continua com o acesso antigo por até 1 dia |
-| Sem tratador global de erros | Os controllers devolvem `error.message` como veio: um erro inesperado do Prisma pode expor detalhes internos |
 | Rotas de placa abertas a OPERATOR | `bind` e `unbind` não exigem `isAdmin` (decisão de negócio: o operador instala a placa) |
 
 ## Telemetria e regras de negócio
@@ -48,9 +48,12 @@ Pontos observados no código que estão incompletos, inconsistentes ou que repre
 | Sensor mudo sem alerta | Alerta `SENSOR_OFFLINE` pelo job de 1 minuto |
 | Mensagens perdidas com a API fora do ar | Sessão MQTT persistente: o broker guarda as mensagens |
 | `sourceType` livre no HTTP | Só `HISTORICAL` é aceito; o resto vira `REALTIME` |
+| Broker sem TLS e firmware com Wi-Fi e chave compilados | Produção com TLS (certificado raiz do broker no firmware). Um binário para todas as placas; Wi-Fi e chave informados no portal de configuração |
 | Senha do banco e MASTER `123456` fixos no repositório | `POSTGRES_*` e `SEED_MASTER_*` vêm do `.env`; o Postgres só escuta em `127.0.0.1` |
 | `.env` sem validação | `validateEnv` impede a API de subir sem segredo e, em produção, com segredo fraco ou de exemplo |
 | Login sem limite de tentativas | 10 falhas por IP a cada 15 minutos; telemetria HTTP limitada a 600 por minuto |
 | Sem headers de segurança | `helmet`, sem `X-Powered-By`, corpo JSON limitado a 100 KB |
 | CORS com IP da rede local fixo | Padrão só `http://localhost:5173`; o resto vem de `CORS_ORIGINS` |
 | `bcrypt` e `bcryptjs` | Só `bcryptjs`, também no seed |
+| Sem tratador global de erros; `error.message` do Prisma devolvido ao cliente | `sendError` só repassa mensagens de negócio; o resto vira 500 genérico. `errorHandler` global para 413, JSON inválido e exceções |
+| Sem build de produção | `npm run build` (dist/), `npm start`, `GET /health` e desligamento limpo no `SIGTERM` |

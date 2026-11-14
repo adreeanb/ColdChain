@@ -77,7 +77,7 @@ export default function DeviceDetailPage() {
                     </Button>
                   }
                   title="Gerar uma nova chave para esta placa?"
-                  description="A chave atual deixa de valer na hora: a placa só volta a enviar dados depois que a nova for gravada no firmware."
+                  description="A chave atual deixa de valer na hora: a placa só volta a enviar dados depois que a nova for informada no portal de configuração dela."
                   confirmLabel="Gerar chave"
                   onConfirm={() => rotateKey.mutate(device.id)}
                 />

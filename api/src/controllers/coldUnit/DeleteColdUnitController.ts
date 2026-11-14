@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { DeleteColdUnitService } from '../../services/coldUnit/DeleteColdUnitService.js';
+import { sendError } from '../../lib/httpError.js';
 
 class DeleteColdUnitController {
   async handle(req: Request, res: Response) {
@@ -15,7 +16,7 @@ class DeleteColdUnitController {
       await deleteColdUnitService.execute({ id, enterpriseId: req.user.enterpriseId });
       return res.json({ message: "Unidade de frio deletada com sucesso." });
     } catch (error: any) {
-      return res.status(400).json({ error: error.message });
+      return sendError(res, 400, error);
     }
   }
 }

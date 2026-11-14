@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { GetEnterpriseService } from '../../services/enterprise/GetEnterpriseService.js';
+import { sendError } from '../../lib/httpError.js';
 
 class GetEnterpriseController {
   async handle(req: Request, res: Response) {
@@ -21,7 +22,7 @@ class GetEnterpriseController {
       const enterprise = await getEnterpriseService.execute(id);
       return res.json(enterprise);
     } catch (error: any) {
-      return res.status(404).json({ error: error.message });
+      return sendError(res, 404, error);
     }
   }
 }

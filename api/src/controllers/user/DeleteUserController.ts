@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { DeleteUserService } from '../../services/user/DeleteUserService.js';
 import { resolveEnterpriseId } from '../../lib/tenant.js';
+import { sendError } from '../../lib/httpError.js';
 
 class DeleteUserController {
   async handle(req: Request, res: Response) {
@@ -22,7 +23,7 @@ class DeleteUserController {
 
       return res.json(result);
     } catch (error: any) {
-      return res.status(400).json({ error: error.message });
+      return sendError(res, 400, error);
     }
   }
 }

@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { UnbindDeviceService } from '../../services/device/UnbindDeviceService.js';
+import { sendError } from '../../lib/httpError.js';
 
 class UnbindDeviceController {
   async handle(req: Request, res: Response) {
@@ -15,7 +16,7 @@ class UnbindDeviceController {
       const result = await unbindDeviceService.execute({ id, enterpriseId: req.user.enterpriseId });
       return res.json(result);
     } catch (error: any) {
-      return res.status(400).json({ error: error.message });
+      return sendError(res, 400, error);
     }
   }
 }

@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { ChangePasswordService } from '../../services/user/ChangePasswordService.js';
+import { sendError } from '../../lib/httpError.js';
 
 class ChangePasswordController {
   async handle(req: Request, res: Response) {
@@ -11,7 +12,7 @@ class ChangePasswordController {
       const result = await changePasswordService.execute({ id: req.user.id, currentPassword, newPassword });
       return res.json(result);
     } catch (error: any) {
-      return res.status(400).json({ error: error.message });
+      return sendError(res, 400, error);
     }
   }
 }

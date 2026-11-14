@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { CreateUserService } from '../../services/user/CreateUserService.js';
 import { resolveEnterpriseId } from '../../lib/tenant.js';
+import { sendError } from '../../lib/httpError.js';
 
 class CreateUserController {
   async handle(req: Request, res: Response) {
@@ -13,7 +14,7 @@ class CreateUserController {
       const user = await createUserService.execute({ name, email, password, role, enterpriseId });
       return res.status(201).json(user);
     } catch (error: any) {
-      return res.status(400).json({ error: error.message });
+      return sendError(res, 400, error);
     }
   }
 }

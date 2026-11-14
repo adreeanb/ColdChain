@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { CreateColdUnitService } from '../../services/coldUnit/CreateColdUnitService.js';
+import { sendError } from '../../lib/httpError.js';
 
 class CreateColdUnitController {
   async handle(req: Request, res: Response) {
@@ -27,7 +28,7 @@ class CreateColdUnitController {
 
       return res.status(201).json(coldUnit);
     } catch (error: any) {
-      return res.status(400).json({ error: error.message });
+      return sendError(res, 400, error);
     }
   }
 }

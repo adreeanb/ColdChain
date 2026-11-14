@@ -49,7 +49,7 @@ flowchart TD
 
     M[MASTER: POST /devices<br/>macAddress + enterpriseId] --> N[CreateDeviceService<br/>valida MAC, empresa e unicidade<br/>gera a chave]
     N --> O[(ColdUnitDevice<br/>ativa, sem vínculo<br/>apiKeyHash)]
-    N --> K[Chave exibida uma vez<br/>vai para o secrets.h do firmware]
+    N --> K[Chave exibida uma vez<br/>colada no portal de configuração da placa]
     O -.-> C
 
     C -- Sim --> CK{Chave confere?}
@@ -68,7 +68,7 @@ A placa passa por quatro estágios:
 | Estágio | Condição | Destino das leituras |
 |---|---|---|
 | Desconhecida | MAC não cadastrado | **Descartadas** |
-| Cadastrada, firmware sem a chave certa | `POST /devices` feito, `DEVICE_KEY` errada ou ausente | **Recusadas** |
+| Cadastrada, placa sem a chave certa | `POST /devices` feito, chave errada ou ausente no portal | **Recusadas** |
 | Cadastrada, sem vínculo | Chave certa, sem `bind` | Quarentena (por até `QUARANTINE_TTL_HOURS`, padrão 2 h) |
 | Vinculada | `POST /devices/bind` feito | Leituras oficiais e alertas |
 
@@ -85,7 +85,7 @@ sequenceDiagram
     API-->>API: DISCARDED (log)
     M->>API: POST /devices { macAddress, enterpriseId }
     API-->>M: 201 placa + deviceKey (única vez)
-    M->>ESP: grava DEVICE_KEY no secrets.h e regrava o firmware
+    M->>ESP: cola a chave no portal de configuração da placa
     ESP->>API: leitura com a chave
     API-->>API: aceita, vai para a quarentena
     OP->>API: GET /devices/unbound
@@ -96,7 +96,7 @@ sequenceDiagram
     API-->>API: STORED (+ episódio de alerta se fora da faixa)
 ```
 
-Na prática, a ordem natural é cadastrar a placa **antes** de gravar o firmware, porque a chave só existe depois do cadastro.
+Na prática, a ordem natural é cadastrar a placa **antes** de configurá-la em campo, porque a chave só existe depois do cadastro. Sem chave, a placa fica no portal de configuração e nem tenta enviar.
 
 ## Consequências e por que funciona assim
 

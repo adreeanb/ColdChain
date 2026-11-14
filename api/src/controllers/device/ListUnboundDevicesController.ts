@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { ListUnboundDevicesService } from '../../services/device/ListUnboundDevicesService.js';
+import { sendError } from '../../lib/httpError.js';
 
 class ListUnboundDevicesController {
   async handle(req: Request, res: Response) {
@@ -9,7 +10,7 @@ class ListUnboundDevicesController {
       const devices = await listUnboundDevicesService.execute(req.user.enterpriseId);
       return res.json(devices);
     } catch (error: any) {
-      return res.status(400).json({ error: error.message });
+      return sendError(res, 400, error);
     }
   }
 }

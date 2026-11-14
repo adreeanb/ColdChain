@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { ListDevicesService } from '../../services/device/ListDevicesService.js';
 import { resolveEnterpriseId } from '../../lib/tenant.js';
+import { sendError } from '../../lib/httpError.js';
 
 class ListDevicesController {
   async handle(req: Request, res: Response) {
@@ -13,7 +14,7 @@ class ListDevicesController {
       const devices = await listDevicesService.execute({ enterpriseId, includeInactive });
       return res.json(devices);
     } catch (error: any) {
-      return res.status(400).json({ error: error.message });
+      return sendError(res, 400, error);
     }
   }
 }

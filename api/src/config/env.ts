@@ -40,6 +40,12 @@ export function validateEnv() {
     }
   }
 
+  // Fora da máquina local, usuário, senha e chave das placas só podem trafegar com TLS
+  const brokerUrl = process.env.MQTT_BROKER_URL;
+  if (isProduction && brokerUrl && !brokerUrl.startsWith('mqtts://')) {
+    errors.push('MQTT_BROKER_URL deve usar TLS em produção (mqtts://host:8883).');
+  }
+
   for (const name of ['JWT_SECRET', 'MQTT_PASSWORD', 'MQTT_DEVICE_PASSWORD']) {
     const value = process.env[name];
     if (value && EXAMPLE_VALUES.has(value)) {

@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { ListAlertsService } from '../../services/alert/ListAlertsService.js';
+import { sendError } from '../../lib/httpError.js';
 
 class ListAlertsController {
   async handle(req: Request, res: Response) {
@@ -23,7 +24,7 @@ class ListAlertsController {
       
       return res.json(alerts);
     } catch (error: any) {
-      return res.status(400).json({ error: error.message });
+      return sendError(res, 400, error);
     }
   }
 }

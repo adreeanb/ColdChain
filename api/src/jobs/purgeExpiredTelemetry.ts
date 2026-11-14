@@ -18,5 +18,8 @@ export function iniciarPurgeExpiredTelemetryJob() {
   };
 
   run();
-  setInterval(run, PURGE_INTERVAL_MS);
+  const timer = setInterval(run, PURGE_INTERVAL_MS);
+
+  // Devolve a função que para o job no desligamento
+  return () => clearInterval(timer);
 }

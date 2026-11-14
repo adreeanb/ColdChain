@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { ListTemperatureReadingsService } from '../../services/telemetry/ListTemperatureReadingsService.js';
+import { sendError } from '../../lib/httpError.js';
 
 class ListTemperatureReadingsController {
   async handle(req: Request, res: Response) {
@@ -27,7 +28,7 @@ class ListTemperatureReadingsController {
 
       return res.json(temperatureReadings);
     } catch (error: any) {
-      return res.status(400).json({ error: error.message });
+      return sendError(res, 400, error);
     }
   }
 }

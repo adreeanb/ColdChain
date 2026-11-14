@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { GetColdUnitService } from '../../services/coldUnit/GetColdUnitService.js';
+import { sendError } from '../../lib/httpError.js';
 
 class GetColdUnitController {
   async handle(req: Request, res: Response) {
@@ -16,7 +17,7 @@ class GetColdUnitController {
       const coldUnit = await getColdUnitService.execute({ id, enterpriseId: req.user.enterpriseId });
       return res.json(coldUnit);
     } catch (error: any) {
-      return res.status(404).json({ error: error.message });
+      return sendError(res, 404, error);
     }
   }
 }

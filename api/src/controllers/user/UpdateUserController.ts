@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { UpdateUserService } from '../../services/user/UpdateUserService.js';
 import { resolveEnterpriseId } from '../../lib/tenant.js';
+import { sendError } from '../../lib/httpError.js';
 
 class UpdateUserController {
   async handle(req: Request, res: Response) {
@@ -26,7 +27,7 @@ class UpdateUserController {
 
       return res.json(user);
     } catch (error: any) {
-      return res.status(400).json({ error: error.message });
+      return sendError(res, 400, error);
     }
   }
 }

@@ -31,7 +31,9 @@ flowchart LR
 
 Cada operação tem um par controller/service com o mesmo nome, por exemplo `CreateColdUnitController.ts` e `CreateColdUnitService.ts`. Os controllers têm um método `handle(req, res)`; os services têm um único método `execute()`.
 
-Não existe tratador global de erros (a linha `app.use(errorHandler)` está comentada em `server.ts`). Cada controller tem seu próprio `try/catch` e decide o status: em geral `400` para erros de validação/negócio, `404` para buscas, `401` no login e `500` em listagens.
+Cada controller tem seu próprio `try/catch` e responde com `sendError(res, status, error)` (`src/lib/httpError.ts`), escolhendo o status: em geral `400` para erros de validação/negócio, `404` para buscas e `401` no login. O `sendError` só devolve a mensagem quando o erro é um `Error` comum, lançado de propósito por um service (mensagem escrita para o usuário). Qualquer outro erro (Prisma, pg, TypeError) é registrado no log e respondido com `500` e uma mensagem genérica, sem detalhes internos. Erros de formato rejeitados pelo Prisma viram `400 Dados inválidos na requisição.`
+
+O tratador global (`src/middlewares/errorHandler.ts`, último `app.use`) cuida do que não passa pelos controllers: corpo acima de 100 KB (`413`), JSON mal formado (`400`) e exceções não tratadas (`500` genérico).
 
 ### Convenções técnicas
 
@@ -68,7 +70,7 @@ flowchart TD
     B --> HM[helmet<br/>headers de segurança]
     HM --> C[CORS<br/>origens de CORS_ORIGINS ou<br/>localhost:5173]
     C --> D[express.json<br/>limite de 100 KB]
-    D --> E[app.use routes]
+    D --> E[app.use routes<br/>e errorHandler]
     E --> F[app.listen PORT ou 3334]
     F --> G[iniciarMQTTSubscriber]
     G --> H[iniciarPurgeExpiredTelemetryJob]
@@ -78,14 +80,16 @@ flowchart TD
     I -.-> I1[Verifica placas sem sinal agora e a cada 1 minuto]
 ```
 
-1. Carrega o `.env` e o valida (`src/config/env.ts`). Faltar `DATABASE_URL` ou `JWT_SECRET` impede o início. Com `NODE_ENV=production`, também impedem: `JWT_SECRET` com menos de 32 caracteres, `CORS_ORIGINS` ausente, credenciais MQTT ausentes e senhas iguais às do `.env.example`. Em desenvolvimento esses casos só geram avisos.
+1. Carrega o `.env` e o valida (`src/config/env.ts`). Faltar `DATABASE_URL` ou `JWT_SECRET` impede o início. Com `NODE_ENV=production`, também impedem: `JWT_SECRET` com menos de 32 caracteres, `CORS_ORIGINS` ausente, credenciais MQTT ausentes, `MQTT_BROKER_URL` sem TLS (`mqtts://`) e senhas iguais às do `.env.example`. Em desenvolvimento esses casos só geram avisos.
 2. Cria a aplicação Express, desliga o header `X-Powered-By` e, com `TRUST_PROXY` definido, confia nesse número de proxies reversos para obter o IP do cliente.
 3. Aplica o `helmet` (headers de segurança, como `Strict-Transport-Security` e `X-Content-Type-Options`).
 4. Configura o CORS com `credentials: true` e os métodos `GET, POST, PUT, DELETE, PATCH`. As origens vêm de `CORS_ORIGINS` (separadas por vírgula) ou, na ausência, apenas `http://localhost:5173`.
-5. Habilita o parser JSON com limite de 100 KB (corpo maior recebe 413) e registra as rotas. O limite de requisições por IP (`src/middlewares/rateLimit.ts`) vale para `POST /login` (10 falhas a cada 15 minutos) e `POST /telemetry/readings` (600 por minuto); acima disso, 429.
+5. Habilita o parser JSON com limite de 100 KB (corpo maior recebe 413), registra as rotas e, por último, o tratador global de erros. O limite de requisições por IP (`src/middlewares/rateLimit.ts`) vale para `POST /login` (10 falhas a cada 15 minutos) e `POST /telemetry/readings` (600 por minuto); acima disso, 429.
 6. Sobe o servidor HTTP na porta `PORT` (padrão 3334).
 7. Inicia o assinante MQTT (ver [Telemetria](08-telemetria.md)).
 8. Inicia os jobs de limpeza da quarentena e de placas sem sinal (ver [Jobs](11-jobs-e-soft-delete.md)).
+
+No `SIGTERM` (deploy no Render, `docker stop`) ou `SIGINT`, o servidor para os jobs, fecha as conexões HTTP (inclusive os streams SSE), encerra o cliente MQTT (a sessão persistente guarda as mensagens no broker) e o Prisma, e sai. Se algo travar, sai à força depois de 10 segundos.
 
 O carregamento do `.env` acontece em `src/config/env.ts` (`import 'dotenv/config'`), o primeiro import de `src/server.ts`. `src/lib/prisma.ts` também o importa, para scripts que usam o cliente sem passar pelo servidor.
 

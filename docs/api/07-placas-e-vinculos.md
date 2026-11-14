@@ -59,7 +59,7 @@ flowchart TD
     G --> H[201 placa + deviceKey]
 ```
 
-A resposta traz a placa e o campo `deviceKey`, **a única vez em que a chave aparece**. Ela deve ir para o `DEVICE_KEY` do `secrets.h` do firmware. A placa nasce ativa e sem vínculo: a partir daqui, as leituras com a chave certa deixam de ser descartadas e passam a ir para a quarentena.
+A resposta traz a placa e o campo `deviceKey`, **a única vez em que a chave aparece**. Ela deve ser colada no portal de configuração da placa (rede `ColdChain-XXXXXX`; ver `firmware/README.md`). A placa nasce ativa e sem vínculo: a partir daqui, as leituras com a chave certa deixam de ser descartadas e passam a ir para a quarentena.
 
 ## 7.2 Gerar nova chave — `POST /devices/:id/key` (MASTER)
 

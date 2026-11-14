@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { UpdateColdUnitService } from '../../services/coldUnit/UpdateColdUnitService.js';
+import { sendError } from '../../lib/httpError.js';
 
 class UpdateColdUnitController {
   async handle(req: Request, res: Response) {
@@ -16,7 +17,7 @@ class UpdateColdUnitController {
       const updatedColdUnit = await updateColdUnitService.execute({ id, enterpriseId: req.user.enterpriseId, name, type, minTemperature, maxTemperature, licensePlate, isFixedLocation, location });
       return res.json(updatedColdUnit);
     } catch (error: any) {
-      return res.status(400).json({ error: error.message });
+      return sendError(res, 400, error);
     }
   }
 }

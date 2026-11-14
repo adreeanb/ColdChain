@@ -32,9 +32,9 @@ São três partes:
 
 - Lê o sensor periodicamente e descarta leituras de erro do sensor (-127 °C e 85 °C).
 - Identifica-se pelo **endereço MAC** da placa e assina cada mensagem com a **chave da placa**, gerada no cadastro: `{ key, temperatura, timestamp }`, com o horário em UTC obtido por NTP.
-- Publica no tópico `coldchain/devices/<MAC>/realtime` quando está conectada, num broker Mosquitto próprio com usuário e senha.
+- Publica no tópico `coldchain/devices/<MAC>/realtime` quando está conectada, num broker privado com usuário e senha: em produção a EMQX Cloud Serverless, com TLS; no desenvolvimento, o Mosquitto do `docker-compose`.
 - **Store-and-forward:** sem rede, grava as leituras na memória flash (SPIFFS). Quando a conexão volta, envia o histórico em lotes de 20 leituras por `coldchain/devices/<MAC>/historical`, sem travar as leituras ao vivo e preservando o horário original. Reenvios são ignorados pela API.
-- Credenciais de Wi-Fi, broker e chave ficam em `include/secrets.h`, fora do código e do git.
+- Um único firmware serve para todas as placas: o broker e a conta das placas ficam em `include/secrets.h` (fora do git). O Wi-Fi e a chave da placa são informados em campo, pelo celular, num portal de configuração aberto pela própria placa (rede `ColdChain-XXXXXX`), e ficam gravados na NVS do ESP32.
 
 ## API (backend)
 
@@ -154,7 +154,7 @@ npm install
 npm run dev                   # inicia o frontend; /api é encaminhado para a API
 
 # Firmware (pasta firmware/)
-cp include/secrets.example.h include/secrets.h   # Wi-Fi, broker e chave da placa
+cp include/secrets.example.h include/secrets.h   # broker e conta das placas (Wi-Fi e chave: pelo portal)
 pio run -t upload
 ```
 

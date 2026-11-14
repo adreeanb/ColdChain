@@ -11,7 +11,10 @@ Cold chain monitoring REST API: ESP32 sensors report temperatures for cold rooms
 ```bash
 docker compose up -d      # Postgres (host port 5433) and the Mosquitto broker (1883)
 npm run dev               # tsx watch src/server.ts (PORT from .env, falls back to 3334)
-npx tsc --noEmit          # type check; there is no build script
+npx tsc --noEmit          # type check (src/ only; the seed runs through tsx)
+npm run build             # prisma generate && tsc, output in dist/
+npm start                 # node dist/server.js (production)
+npm run migrate:deploy    # prisma migrate deploy (production)
 
 npx prisma migrate dev --name <name>   # apply schema changes and create a migration
 npx prisma generate                    # regenerate the client
@@ -22,7 +25,9 @@ There is no test runner or linter configured (`npm test` is a placeholder that e
 
 `.env` needs `POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB` (read by `docker-compose.yml`), `DATABASE_URL`, `PORT`, `JWT_SECRET`, `MQTT_BROKER_URL`, `MQTT_USERNAME`/`MQTT_PASSWORD` (the API's broker account) and `MQTT_DEVICE_USERNAME`/`MQTT_DEVICE_PASSWORD` (the boards' shared account); see `.env.example`. The Mosquitto container regenerates its password and ACL files from these on every start (`mosquitto/entrypoint.sh`). Optional: `MQTT_CLIENT_ID` (default `coldchain-api`), `QUARANTINE_TTL_HOURS` (default 2), `SENSOR_OFFLINE_MINUTES` (default 10), `CORS_ORIGINS` (comma-separated, default `http://localhost:5173`) and `TRUST_PROXY` (number of reverse proxies in front of the API). The seed reads `SEED_MASTER_EMAIL`/`SEED_MASTER_PASSWORD` (and optional `SEED_MASTER_NAME`); never hardcode credentials.
 
-`src/config/env.ts` is the first import of `src/server.ts`: it loads `.env`, and `validateEnv()` stops startup without `DATABASE_URL` or `JWT_SECRET`. With `NODE_ENV=production` it also stops on a `JWT_SECRET` under 32 characters, a missing `CORS_ORIGINS` or MQTT account, or values copied from `.env.example`; in development those only warn. `server.ts` also applies `helmet` and a 100 KB JSON limit, and `src/middlewares/rateLimit.ts` limits `POST /login` and `POST /telemetry/readings` per IP.
+Production runs on Render (API and web, `render.yaml` at the repo root), Supabase (Postgres, Session pooler) and EMQX Cloud Serverless (MQTT over TLS); see `docs/DEPLOY.md`. `GET /health` (public) reports database and MQTT state for the Render health check. On `SIGTERM`/`SIGINT`, `server.ts` stops the jobs, closes HTTP connections (including SSE), the MQTT client and Prisma, then exits.
+
+`src/config/env.ts` is the first import of `src/server.ts`: it loads `.env`, and `validateEnv()` stops startup without `DATABASE_URL` or `JWT_SECRET`. With `NODE_ENV=production` it also stops on a `JWT_SECRET` under 32 characters, a missing `CORS_ORIGINS` or MQTT account, a `MQTT_BROKER_URL` without `mqtts://`, or values copied from `.env.example`; in development those only warn. `server.ts` also applies `helmet` and a 100 KB JSON limit, and `src/middlewares/rateLimit.ts` limits `POST /login` and `POST /telemetry/readings` per IP.
 
 This is the `api/` folder of the ColdChain monorepo. The web client in `../web` is its only consumer, so response shapes can change as long as both move together, in the same commit. Its Playwright suite starts this API from `../api`. The ESP32 firmware in `../firmware` is the other side of the MQTT topics and payloads, so changes there also move together.
 
@@ -30,7 +35,7 @@ This is the `api/` folder of the ColdChain monorepo. The web client in `../web` 
 
 Requests flow `src/routes/index.ts` → middleware → controller → service → `prisma` from `src/lib/prisma.ts`.
 
-- **Controllers** (`src/controllers/<domain>/`) are classes with a `handle(req, res)` method. They read the request, instantiate the service, and map thrown errors to HTTP responses in a local `try/catch`. There is no global error handler.
+- **Controllers** (`src/controllers/<domain>/`) are classes with a `handle(req, res)` method. They read the request, instantiate the service, and map thrown errors to HTTP responses in a local `try/catch` through `sendError(res, status, error)` (`src/lib/httpError.ts`). It returns the message only for plain `Error`s thrown by services (business rules written for the user); anything else (Prisma, pg, TypeError) is logged and answered with a generic 500, so internal details never leak. Never answer with `error.message` directly. `src/middlewares/errorHandler.ts` is the global handler for `express.json` errors (413, invalid JSON) and anything that escapes a controller.
 - **Services** (`src/services/<domain>/`) are classes with a single `execute()` method holding the business logic. They signal failures with `throw new Error(message)`.
 - **One class per action**, with file names like `CreateColdUnitController.ts` / `CreateColdUnitService.ts`. Routes are all registered in `src/routes/index.ts`.
 - **ESM**: `"type": "module"` with `nodenext` resolution, so relative imports need the `.js` extension. `verbatimModuleSyntax` requires `import type` for type-only imports.

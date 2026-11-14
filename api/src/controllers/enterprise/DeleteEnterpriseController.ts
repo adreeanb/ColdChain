@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { DeleteEnterpriseService } from '../../services/enterprise/DeleteEnterpriseService.js';
+import { sendError } from '../../lib/httpError.js';
 
 class DeleteEnterpriseController {
   async handle(req: Request, res: Response) {
@@ -20,7 +21,7 @@ class DeleteEnterpriseController {
       await deleteEnterpriseService.execute(id);
       return res.json({ message: "Empresa deletada com sucesso." });
     } catch (error: any) {
-      return res.status(400).json({ error: error.message });
+      return sendError(res, 400, error);
     }
   }
 }

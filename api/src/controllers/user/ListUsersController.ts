@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { ListUsersService } from '../../services/user/ListUsersService.js';
 import { resolveEnterpriseId } from '../../lib/tenant.js';
+import { sendError } from '../../lib/httpError.js';
 
 class ListUsersController {
   async handle(req: Request, res: Response) {
@@ -10,7 +11,7 @@ class ListUsersController {
       const users = await listUsersService.execute(resolveEnterpriseId(req.user, req.query.enterpriseId));
       return res.json(users);
     } catch (error: any) {
-      return res.status(400).json({ error: error.message });
+      return sendError(res, 400, error);
     }
   }
 }

@@ -6,14 +6,36 @@
 #include <SPIFFS.h>
 #include <ArduinoJson.h>
 #include <time.h>
+#include <Preferences.h>
+#include <WiFiManager.h>
+#include <WiFiClientSecure.h>
+#include "config.h"
 #include "secrets.h"
 
 const int oneWireBus = 4;
 OneWire oneWire(oneWireBus);
 DallasTemperature sensors(&oneWire);
 
-WiFiClient espClient;
-PubSubClient client(espClient);
+// Produção usa TLS (EMQX Cloud Serverless); o Mosquitto local do docker-compose, não
+#if MQTT_USE_TLS
+WiFiClientSecure netClient;
+#else
+WiFiClient netClient;
+#endif
+PubSubClient client(netClient);
+
+// Wi-Fi e chave vêm do portal de configuração. O Wi-Fi fica na NVS do próprio ESP32
+// (WiFiManager); a chave, no namespace "coldchain" das Preferences.
+Preferences prefs;
+WiFiManager wm;
+String deviceKey;
+String nomePortal;      // ColdChain-<3 últimos bytes do MAC>
+String htmlMac;         // Mostrado no portal para conferir com o cadastro
+bool portalAtivo = false;
+unsigned long inicioPortal = 0;
+unsigned long botaoPressionadoDesde = 0;
+bool reiniciarAgendado = false;
+unsigned long reiniciarEm = 0;
 
 unsigned long lastMsg = 0;
 unsigned long lastReconnectAttempt = 0;
@@ -43,17 +65,159 @@ uint32_t bootId;         // Muda a cada boot: o millis() de um boot não vale em
 size_t posicaoForward = 0;
 bool temPendencias = false;
 
+// ---------------------------------------------------------
+// CONFIGURAÇÃO: chave da placa e portal
+// ---------------------------------------------------------
+bool chaveValida(const String& chave) {
+  return chave.startsWith(DEVICE_KEY_PREFIXO) && chave.length() == DEVICE_KEY_TAMANHO;
+}
+
+void carregarChave() {
+  prefs.begin("coldchain", true);
+  deviceKey = prefs.getString("key", "");
+  prefs.end();
+}
+
+void salvarChave(const String& chave) {
+  prefs.begin("coldchain", false);
+  prefs.putString("key", chave);
+  prefs.end();
+  deviceKey = chave;
+}
+
+// O campo fica vazio: a chave atual não é mostrada a quem abrir o portal.
+// Com uma chave já gravada, deixar em branco mantém a atual.
+WiFiManagerParameter* campoChave = nullptr;
+WiFiManagerParameter* campoMac = nullptr;
+
+void aoSalvarPortal() {
+  String nova = String(campoChave->getValue());
+  nova.trim();
+
+  if (nova.length() == 0) {
+    Serial.println("[CONFIG] Chave mantida.");
+  } else if (chaveValida(nova)) {
+    salvarChave(nova);
+    Serial.println("[CONFIG] Chave da placa gravada.");
+  } else {
+    Serial.println("[CONFIG] Chave invalida ignorada: copie a chave completa do painel (ck_...).");
+  }
+
+  // Reinicia com a configuração nova. As leituras offline estão no SPIFFS e não se perdem.
+  reiniciarAgendado = true;
+  reiniciarEm = millis() + 3000;
+}
+
+void prepararPortal() {
+  bool temChave = chaveValida(deviceKey);
+
+  // Validação no navegador: formato da API (ck_ + 32 caracteres base64url)
+  static const char* atributosObrigatorio = "pattern='ck_[A-Za-z0-9_\\-]{32}' required placeholder='ck_...'";
+  static const char* atributosOpcional = "pattern='ck_[A-Za-z0-9_\\-]{32}' placeholder='em branco: manter a atual'";
+
+  htmlMac = "<p>MAC da placa: <b>" + macAddress + "</b><br>Confira com o cadastro no painel.</p>";
+  campoMac = new WiFiManagerParameter(htmlMac.c_str());
+  campoChave = new WiFiManagerParameter(
+    "device_key",
+    temChave ? "Nova chave da placa" : "Chave da placa (copie do painel)",
+    "",
+    DEVICE_KEY_TAMANHO + 1,
+    temChave ? atributosOpcional : atributosObrigatorio
+  );
+
+  wm.addParameter(campoMac);
+  wm.addParameter(campoChave);
+  wm.setTitle("ColdChain");
+  // Sem a página "update" (envio de firmware pelo portal) nem "info"
+  std::vector<const char*> menu = {"wifi", "param", "exit"};
+  wm.setMenu(menu);
+  wm.setSaveParamsCallback(aoSalvarPortal);
+  wm.setSaveConfigCallback(aoSalvarPortal);
+  wm.setBreakAfterConfig(true);
+}
+
+// Primeira instalação (sem Wi-Fi ou sem chave): bloqueia até o técnico configurar.
+// As leituras ainda não têm para onde ir, e a placa reinicia ao salvar.
+void portalObrigatorio() {
+  Serial.print("[CONFIG] Placa sem configuracao. Conecte-se na rede ");
+  Serial.println(nomePortal);
+
+  wm.setConfigPortalBlocking(true);
+  wm.setConfigPortalTimeout(0);
+  wm.startConfigPortal(nomePortal.c_str(), PORTAL_PASSWORD);
+
+  delay(1000);
+  ESP.restart();
+}
+
+// Botão BOOT segurado com a placa ligada: portal sem bloquear, as leituras continuam
+// (gravadas offline se o Wi-Fi cair) e o portal fecha sozinho depois de PORTAL_TIMEOUT_S.
+void abrirPortalSobDemanda() {
+  if (portalAtivo) return;
+
+  Serial.print("[CONFIG] Portal aberto: conecte-se na rede ");
+  Serial.println(nomePortal);
+
+  wm.setConfigPortalBlocking(false);
+  wm.setConfigPortalTimeout(PORTAL_TIMEOUT_S);
+  wm.startConfigPortal(nomePortal.c_str(), PORTAL_PASSWORD);
+  portalAtivo = true;
+  inicioPortal = millis();
+}
+
+void atenderPortal() {
+  if (!portalAtivo) return;
+
+  wm.process();
+
+  if (millis() - inicioPortal > (unsigned long)PORTAL_TIMEOUT_S * 1000UL) {
+    wm.stopConfigPortal();
+    portalAtivo = false;
+    Serial.println("[CONFIG] Portal fechado por tempo. Configuracao mantida.");
+    WiFi.mode(WIFI_STA);
+    WiFi.begin();
+  }
+}
+
+void verificarBotaoConfig() {
+  if (digitalRead(BOTAO_CONFIG_PINO) == LOW) {
+    if (botaoPressionadoDesde == 0) {
+      botaoPressionadoDesde = millis();
+    } else if (millis() - botaoPressionadoDesde > BOTAO_CONFIG_MS) {
+      botaoPressionadoDesde = 0;
+      abrirPortalSobDemanda();
+    }
+  } else {
+    botaoPressionadoDesde = 0;
+  }
+}
+
 void setup_wifi() {
-  Serial.print("\nConectando ao Wi-Fi: ");
-  Serial.println(WIFI_SSID);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  WiFi.mode(WIFI_STA);
+  WiFi.setAutoReconnect(true);
 
   macAddress = WiFi.macAddress();
   topicoTempoReal = "coldchain/devices/" + macAddress + "/realtime";
   topicoHistorico = "coldchain/devices/" + macAddress + "/historical";
 
+  // Últimos 3 bytes do MAC, sem os dois-pontos: ColdChain-A1B2C3
+  String sufixo = macAddress.substring(9);
+  sufixo.replace(":", "");
+  nomePortal = String(PORTAL_PREFIXO) + sufixo;
+
   Serial.print("MAC da placa: ");
   Serial.println(macAddress);
+
+  carregarChave();
+  prepararPortal();
+
+  if (!wm.getWiFiIsSaved() || !chaveValida(deviceKey)) {
+    portalObrigatorio();
+  }
+
+  // Rede gravada pelo portal; reconecta sozinho se cair
+  Serial.println("Conectando ao Wi-Fi gravado...");
+  WiFi.begin();
 }
 
 bool relogioValido() {
@@ -75,7 +239,7 @@ void formatarTimestamp(time_t epoch, char* destino, size_t tamanho) {
 // não é enviado e o backend usa a hora de chegada.
 bool publicarTempoReal(float temperatura, time_t epoch) {
   StaticJsonDocument<256> doc;
-  doc["key"] = DEVICE_KEY;
+  doc["key"] = deviceKey;
   doc["temperatura"] = temperatura;
 
   char timestamp[25];
@@ -178,7 +342,7 @@ void enviarProximoLote() {
   file.seek(posicaoForward);
 
   DynamicJsonDocument doc(3072);
-  doc["key"] = DEVICE_KEY;
+  doc["key"] = deviceKey;
   JsonArray leituras = doc.createNestedArray("leituras");
   size_t proximaPosicao = posicaoForward;
 
@@ -255,21 +419,44 @@ void setup() {
   temPendencias = SPIFFS.exists(ARQUIVO_OFFLINE);
 
   bootId = esp_random();
+  pinMode(BOTAO_CONFIG_PINO, INPUT_PULLUP);
 
   setup_wifi();
   configTime(0, 0, "pool.ntp.org", "time.google.com"); // UTC
+
+#if MQTT_USE_TLS
+  // Só aceita o broker com certificado emitido pelas raízes de CA_RAIZES (config.h)
+  netClient.setCACert(CA_RAIZES);
+#endif
   client.setServer(MQTT_HOST, MQTT_PORT);
   client.setBufferSize(TAMANHO_BUFFER_MQTT); // O padrão (256 bytes) não comporta um lote
   sensors.begin();
 }
 
+// O TLS confere a validade do certificado: com o relógio em 1970, ele parece inválido.
+// Até o NTP responder, as leituras vão para o store, como em qualquer queda.
+bool podeConectarBroker() {
+  if (WiFi.status() != WL_CONNECTED) return false;
+#if MQTT_USE_TLS
+  return relogioValido();
+#else
+  return true;
+#endif
+}
+
 void loop() {
+  verificarBotaoConfig();
+  atenderPortal();
+
+  if (reiniciarAgendado && (long)(millis() - reiniciarEm) >= 0) {
+    ESP.restart();
+  }
 
   if (!client.connected()) {
     unsigned long now = millis();
     if (now - lastReconnectAttempt > 5000) {
       lastReconnectAttempt = now;
-      if (WiFi.status() == WL_CONNECTED) {
+      if (podeConectarBroker()) {
         reconnect();
       }
     }

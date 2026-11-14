@@ -12,6 +12,9 @@ import { loginRateLimit, telemetryRateLimit } from '../middlewares/rateLimit.js'
 // CONTROLLERS
 // ==========================================
 
+// Saúde do serviço
+import { HealthController } from '../controllers/health/HealthController.js';
+
 // Autenticação e Usuário
 import { AuthUserController } from '../controllers/user/AuthUserController.js';
 import { CurrentUserController } from '../controllers/user/CurrentUserController.js';
@@ -66,6 +69,11 @@ const routes = Router();
 // ==========================================
 // 1. ROTAS PÚBLICAS
 // ==========================================
+const healthController = new HealthController();
+
+// Health check do Render e do monitor de uptime
+routes.get('/health', healthController.handle);
+
 const authUserController = new AuthUserController();
 
 routes.post('/login', loginRateLimit, authUserController.handle);

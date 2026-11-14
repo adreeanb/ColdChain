@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { CreateDeviceService } from '../../services/device/CreateDeviceService.js';
+import { sendError } from '../../lib/httpError.js';
 
 class CreateDeviceController {
   async handle(req: Request, res: Response) {
@@ -11,7 +12,7 @@ class CreateDeviceController {
       const device = await createDeviceService.execute({ macAddress, enterpriseId });
       return res.status(201).json(device);
     } catch (error: any) {
-      return res.status(400).json({ error: error.message });
+      return sendError(res, 400, error);
     }
   }
 }

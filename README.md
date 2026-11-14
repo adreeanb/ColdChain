@@ -41,11 +41,15 @@ npm run dev                   # http://localhost:5173
 
 # 3. Firmware
 cd firmware
-cp include/secrets.example.h include/secrets.h   # Wi-Fi, broker e chave da placa
+cp include/secrets.example.h include/secrets.h   # broker e conta das placas (Wi-Fi e chave: pelo portal)
 pio run -t upload
 ```
 
 Detalhes de cada parte no README da pasta e em [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md).
+
+## Publicação
+
+Produção roda no Render (API e painel, configurados por [`render.yaml`](render.yaml)), no Supabase (PostgreSQL) e na EMQX Cloud Serverless (broker MQTT com TLS). Passo a passo em [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
 ## Segredos
 

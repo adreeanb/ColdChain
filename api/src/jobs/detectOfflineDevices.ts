@@ -14,5 +14,8 @@ export function iniciarDetectOfflineDevicesJob() {
   };
 
   run();
-  setInterval(run, DETECT_INTERVAL_MS);
+  const timer = setInterval(run, DETECT_INTERVAL_MS);
+
+  // Devolve a função que para o job no desligamento
+  return () => clearInterval(timer);
 }

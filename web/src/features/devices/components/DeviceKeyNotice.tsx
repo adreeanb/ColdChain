@@ -21,7 +21,7 @@ export function DeviceKeyNotice({ macAddress, deviceKey }: { macAddress: string;
       <KeyRound aria-hidden className="size-4" />
       <AlertTitle>Chave da placa {macAddress}</AlertTitle>
       <AlertDescription className="grid gap-2">
-        <p>Grave esta chave no firmware (DEVICE_KEY em secrets.h). Ela não aparece de novo: se perder, gere outra na página da placa.</p>
+        <p>Copie esta chave e cole no portal de configuração da placa (rede ColdChain-XXXXXX, aberta na primeira ligação ou segurando o botão BOOT por 5 segundos). Ela não aparece de novo: se perder, gere outra na página da placa.</p>
         <div className="flex flex-wrap items-center gap-2">
           <code aria-label="Chave da placa" className="rounded bg-muted px-2 py-1 font-mono text-xs break-all text-foreground">
             {deviceKey}

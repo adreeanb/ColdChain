@@ -25,8 +25,20 @@ function parseReadings(payload: any): TelemetryPoint[] {
   }));
 }
 
+let client: mqtt.MqttClient | undefined;
+
+// Usado pelo GET /health
+export function isMqttConnected() {
+  return client?.connected ?? false;
+}
+
+// Desligamento limpo: a sessão persistente continua no broker e as mensagens esperam a próxima conexão
+export async function encerrarMQTTSubscriber() {
+  await client?.endAsync();
+}
+
 export function iniciarMQTTSubscriber() {
-  const client = mqtt.connect(BROKER_URL, {
+  client = mqtt.connect(BROKER_URL, {
     // Sessão persistente com clientId fixo: o broker guarda as mensagens enquanto a API estiver fora
     clientId: process.env.MQTT_CLIENT_ID || 'coldchain-api',
     clean: false,
@@ -39,7 +51,7 @@ export function iniciarMQTTSubscriber() {
   client.on('connect', () => {
     console.log('✅ Backend conectado ao Broker MQTT!');
 
-    client.subscribe(SUBSCRIPTION, { qos: 1 }, (err) => {
+    client?.subscribe(SUBSCRIPTION, { qos: 1 }, (err) => {
       if (!err) {
         console.log(`📡 Inscrito em ${SUBSCRIPTION} (realtime e historical)`);
       } else {

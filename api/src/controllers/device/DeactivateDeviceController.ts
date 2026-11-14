@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { DeactivateDeviceService } from '../../services/device/DeactivateDeviceService.js';
+import { sendError } from '../../lib/httpError.js';
 
 class DeactivateDeviceController {
   async handle(req: Request, res: Response) {
@@ -15,7 +16,7 @@ class DeactivateDeviceController {
       const device = await deactivateDeviceService.execute(id);
       return res.json(device);
     } catch (error: any) {
-      return res.status(400).json({ error: error.message });
+      return sendError(res, 400, error);
     }
   }
 }

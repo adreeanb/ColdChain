@@ -1,15 +1,20 @@
-// Copie para secrets.h (fica fora do git) e preencha com os dados reais
+// Copie para secrets.h (fica fora do git). Os valores são os mesmos para todas as placas:
+// Wi-Fi e chave da placa NÃO ficam aqui, são informados no portal de configuração.
 #pragma once
 
-#define WIFI_SSID "nome-da-rede"
-#define WIFI_PASSWORD "senha-da-rede"
+// Produção: deployment da EMQX Cloud Serverless, com TLS
+#define MQTT_HOST "seu-deployment.regiao.emqxsl.com"
+#define MQTT_PORT 8883
+#define MQTT_USE_TLS 1
 
-// Broker do docker-compose da API: IP do computador na rede local
-#define MQTT_HOST "192.168.1.77"
-#define MQTT_PORT 1883
-// MQTT_DEVICE_USERNAME e MQTT_DEVICE_PASSWORD do .env da API
+// Desenvolvimento com o Mosquitto do docker-compose (sem TLS, só na rede local):
+// #define MQTT_HOST "192.168.0.10"   // IP do computador que roda o docker compose
+// #define MQTT_PORT 1883
+// #define MQTT_USE_TLS 0
+
+// Conta das placas no broker (só publica). Local: MQTT_DEVICE_USERNAME / MQTT_DEVICE_PASSWORD do .env da API
 #define MQTT_USER "coldchain-device"
 #define MQTT_PASSWORD "troque-esta-senha-das-placas"
 
-// Mostrada uma única vez no cadastro da placa (ou em "Gerar nova chave" na página da placa)
-#define DEVICE_KEY "ck_..."
+// Senha da rede ColdChain-XXXXXX aberta pela placa para configuração (mínimo de 8 caracteres)
+#define PORTAL_PASSWORD "troque-esta-senha-do-portal"
