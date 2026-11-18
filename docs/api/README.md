@@ -26,7 +26,7 @@ O código fica em `api/` neste monorepo; o firmware, em `firmware/`. A visão ge
 | 4 | [Usuários](04-usuarios.md) | Perfil próprio, troca de senha, CRUD de usuários |
 | 5 | [Empresas](05-empresas.md) | CRUD de empresas (MASTER) |
 | 6 | [Unidades frias](06-unidades-frias.md) | CRUD de câmaras/caminhões e histórico de placas |
-| 7 | [Placas e vínculos](07-placas-e-vinculos.md) | Cadastro de ESP32, chave, vínculo por QR Code, desvínculo, desativação |
+| 7 | [Placas e vínculos](07-placas-e-vinculos.md) | Cadastro de ESP32, chave, vínculo por QR Code, desvínculo, desativação e reativação |
 | 8 | [Telemetria](08-telemetria.md) | Ingestão HTTP/MQTT, lotes, quarentena, store & forward, consultas |
 | 9 | [Alertas](09-alertas.md) | Episódios de temperatura, placa sem sinal, listagem e resolução |
 | 10 | [Dashboard](10-dashboard.md) | Resumo de status das unidades |
@@ -67,6 +67,7 @@ O código fica em `api/` neste monorepo; o firmware, em `firmware/`. A visão ge
 | POST | `/devices/bind` | isAuthenticated | Todos |
 | POST | `/devices/:id/unbind` | isAuthenticated | Todos |
 | PATCH | `/devices/:id/deactivate` | isAuthenticated, isMaster | MASTER |
+| PATCH | `/devices/:id/activate` | isAuthenticated, isMaster | MASTER |
 | GET | `/devices/:id/associations` | isAuthenticated | Todos |
 | POST | `/devices/:id/key` | isAuthenticated, isMaster | MASTER |
 | GET | `/cold-units/:coldUnitId/readings` | isAuthenticated | Todos |

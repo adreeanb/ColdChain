@@ -50,6 +50,7 @@ import { ListUnboundDevicesController } from '../controllers/device/ListUnboundD
 import { BindDeviceController } from '../controllers/device/BindDeviceController.js';
 import { UnbindDeviceController } from '../controllers/device/UnbindDeviceController.js';
 import { DeactivateDeviceController } from '../controllers/device/DeactivateDeviceController.js';
+import { ActivateDeviceController } from '../controllers/device/ActivateDeviceController.js';
 import { ListDeviceAssociationsController } from '../controllers/device/ListDeviceAssociationsController.js';
 import { RotateDeviceKeyController } from '../controllers/device/RotateDeviceKeyController.js';
 
@@ -162,6 +163,7 @@ const listUnboundDevicesController = new ListUnboundDevicesController();
 const bindDeviceController = new BindDeviceController();
 const unbindDeviceController = new UnbindDeviceController();
 const deactivateDeviceController = new DeactivateDeviceController();
+const activateDeviceController = new ActivateDeviceController();
 const listDeviceAssociationsController = new ListDeviceAssociationsController();
 const rotateDeviceKeyController = new RotateDeviceKeyController();
 
@@ -171,6 +173,7 @@ routes.get('/devices/unbound', isAuthenticated, listUnboundDevicesController.han
 routes.post('/devices/bind', isAuthenticated, bindDeviceController.handle);
 routes.post('/devices/:id/unbind', isAuthenticated, unbindDeviceController.handle);
 routes.patch('/devices/:id/deactivate', isAuthenticated, isMaster, deactivateDeviceController.handle);
+routes.patch('/devices/:id/activate', isAuthenticated, isMaster, activateDeviceController.handle);
 routes.get('/devices/:id/associations', isAuthenticated, listDeviceAssociationsController.handle);
 // Gera uma chave nova para o firmware; a anterior deixa de valer
 routes.post('/devices/:id/key', isAuthenticated, isMaster, rotateDeviceKeyController.handle);

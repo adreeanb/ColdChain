@@ -101,7 +101,7 @@ Para cada unidade, o painel mostra:
 | Empresas (MASTER) | `/enterprises` |
 | Usuários (ADMIN) | `/users` |
 | Unidades | `/cold-units`, `/cold-units/:id/readings`, `/cold-units/:id/readings/series` |
-| Placas | `/devices`, `/devices/unbound`, `/devices/bind`, `/devices/:id/unbind`, `/devices/:id/deactivate` |
+| Placas | `/devices`, `/devices/unbound`, `/devices/bind`, `/devices/:id/unbind`, `/devices/:id/deactivate`, `/devices/:id/activate`, `/devices/:id/key` |
 | Alertas | `GET /alerts`, `PATCH /alerts/:id/resolve` |
 | Telemetria | `POST /telemetry/readings`, além do assinante MQTT |
 

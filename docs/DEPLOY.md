@@ -14,7 +14,7 @@ Navegador ──HTTPS──► Painel (Render Static Site) ──VITE_API_URL (H
 |---|---|---|
 | Banco | Supabase, região **East US (N. Virginia)** | Postgres gerenciado; perto da API no Render |
 | Broker MQTT | EMQX Cloud Serverless | O Render só expõe HTTP(S). O ESP32 (PubSubClient) precisa de MQTT em TCP, então o broker fica fora do Render. É um deployment **privado**, com senha, TLS e regras por usuário, diferente do `broker.hivemq.com` público usado no protótipo |
-| API | Render Web Service, plano **Starter**, região **Virginia** | Sempre ligada: no plano free o serviço dorme sem tráfego HTTP e param o assinante MQTT, os jobs e o SSE |
+| API | Render Web Service, plano **free**, região **Virginia** | Gratuito, mas dorme após 15 min sem tráfego HTTP: um monitor de uptime em `/health` o mantém acordado (seção 3). Para produção de verdade, use o **Starter**, sempre ligado |
 | Painel | Render Static Site (gratuito) | Arquivos estáticos do Vite com fallback do SPA |
 
 O Mosquitto do `api/docker-compose.yml` continua sendo o broker do desenvolvimento local.
@@ -92,10 +92,21 @@ O HiveMQ Cloud Serverless, cogitado antes, não aceita novos cadastros e será d
    `JWT_SECRET` é gerado pelo Render. `NODE_ENV=production`, `TRUST_PROXY=1` e `MQTT_CLIENT_ID` já vêm do `render.yaml`.
 3. No deploy, a API:
    - instala as dependências (inclusive as de desenvolvimento, usadas no build) e compila (`npm run build`: `prisma generate && tsc`);
-   - aplica as migrations no `preDeployCommand` (`npm run migrate:deploy`);
    - sobe com `npm start` e só recebe tráfego depois que `GET /health` responde.
+
+   **As migrations não rodam no deploy.** No build, o Render não alcança o Supabase (`P1001: Can't reach database server`), mas a API em execução alcança. Por isso, sempre que houver migration nova, aplique-a **da sua máquina, antes do push** que leva o código novo:
+   ```powershell
+   cd api
+   $env:DATABASE_URL = "<URL do Supabase, a mesma do Render>"
+   npx prisma migrate deploy
+   Remove-Item Env:DATABASE_URL
+   ```
+   Rode sempre de dentro de `api/`. Fora dela, o `npx` oferece instalar outra versão do Prisma: recuse.
 4. Com `NODE_ENV=production`, a API **não sobe** se faltar variável, se `JWT_SECRET` for curto, se `MQTT_BROKER_URL` não usar `mqtts://` ou se algum valor for igual ao do `.env.example` (`api/src/config/env.ts`). O motivo aparece no log do deploy.
-5. Se usar o plano **free** da API (só para demonstração): o `preDeployCommand` não existe nele, então troque o build por `npm ci --include=dev && npm run build && npm run migrate:deploy`. Configure também um monitor de uptime batendo em `/health` a cada 5 minutos para o serviço não dormir. Mesmo assim pode haver lacunas: com o serviço dormindo, nem o alerta de placa sem sinal é gerado.
+5. **Mantenha a API acordada.** No plano free, o Render desliga o serviço após 15 minutos sem tráfego HTTP. As leituras MQTT não contam como tráfego: com a API dormindo, nada é gravado e nenhum alerta é gerado, nem o de placa sem sinal. Crie um monitor no [UptimeRobot](https://uptimerobot.com) (gratuito) do tipo HTTP(s), com a URL `https://coldchain-api.onrender.com/health` e intervalo de 5 minutos. Ele também avisa por e-mail se a API cair.
+   - As 750 horas mensais do free cobrem uma API ligada o mês inteiro, mas só uma: não crie outro Web Service free na mesma conta.
+   - Se a API dormir mesmo assim, a sessão persistente da EMQX guarda as leituras e as entrega quando ela acordar.
+   - Ao migrar para o **Starter**, troque `plan: free` por `plan: starter` no `render.yaml`. Nele dá para testar um `preDeployCommand: npm run migrate:deploy`, que roda no ambiente da API, e não no do build.
 6. `VITE_API_URL` entra no build do painel. Se mudar a URL da API, faça um novo deploy do painel.
 
 ## 4. Primeiro acesso

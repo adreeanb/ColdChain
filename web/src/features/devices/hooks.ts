@@ -90,3 +90,16 @@ export function useDeactivateDevice() {
     onError: (error) => toast.error(getErrorMessage(error)),
   })
 }
+
+export function useActivateDevice() {
+  const invalidate = useInvalidateDevices()
+
+  return useMutation({
+    mutationFn: devicesApi.activateDevice,
+    onSuccess: () => {
+      invalidate()
+      toast.success('Placa reativada. Copie a chave nova.')
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
+}

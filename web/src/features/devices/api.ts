@@ -40,3 +40,9 @@ export async function deactivateDevice(id: string) {
   const { data } = await api.patch<Device>(`/devices/${id}/deactivate`)
   return data
 }
+
+// Reativa com uma chave nova, devolvida só nesta resposta
+export async function activateDevice(id: string) {
+  const { data } = await api.patch<DeviceKey>(`/devices/${id}/activate`)
+  return data
+}

@@ -22,7 +22,7 @@ interface LiveEvent {
 |---|---|---|
 | `telemetry` | `IngestTelemetryService` | Toda mensagem aceita, com as unidades que receberam leituras |
 | `alerts` | `ResolveAlertService`, `DetectOfflineDevicesService` | Alerta resolvido; alerta de placa sem sinal aberto ou encerrado |
-| `devices` | `BindDeviceService`, `UnbindDeviceService`, `DeactivateDeviceService` | Vínculo criado, encerrado ou placa desativada |
+| `devices` | `BindDeviceService`, `UnbindDeviceService`, `DeactivateDeviceService`, `ActivateDeviceService` | Vínculo criado, encerrado ou placa desativada ou reativada |
 
 Os eventos só dizem **o que mudou**, sem os dados. A tela busca de novo pelas rotas de sempre, e o cálculo do painel continua num lugar só (`GET /dashboard/summary`).
 

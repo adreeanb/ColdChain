@@ -28,7 +28,10 @@ class CreateDeviceService {
     });
 
     if (deviceAlreadyExists) {
-      throw new Error("Já existe uma placa cadastrada com este MAC.");
+      // O MAC é único e a placa nunca é apagada: uma desativada volta pela reativação, não por um novo cadastro
+      throw new Error(deviceAlreadyExists.isActive
+        ? "Já existe uma placa cadastrada com este MAC."
+        : "Esta placa está desativada. Reative-a na página dela ou na lista de placas da empresa dona dela.");
     }
 
     // A chave vai para o firmware e só aparece nesta resposta: o banco guarda apenas o hash

@@ -10,7 +10,7 @@ import { EmptyState, ErrorState, LoadingState, PageHeader } from '@/shared/ui/pa
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
 import { DeviceKeyNotice } from '../components/DeviceKeyNotice'
 import { DeviceSignal } from '../components/DeviceSignal'
-import { useDeviceAssociations, useDevices, useRotateDeviceKey, useUnbindDevice } from '../hooks'
+import { useActivateDevice, useDeviceAssociations, useDevices, useRotateDeviceKey, useUnbindDevice } from '../hooks'
 
 export default function DeviceDetailPage() {
   const { id = '' } = useParams()
@@ -18,6 +18,7 @@ export default function DeviceDetailPage() {
   const associations = useDeviceAssociations(id)
   const unbind = useUnbindDevice()
   const rotateKey = useRotateDeviceKey()
+  const activate = useActivateDevice()
   const { user } = useAuth()
 
   if (devices.isPending) return <LoadingState />
@@ -40,6 +41,8 @@ export default function DeviceDetailPage() {
   }
 
   const unit = device.associations[0]?.coldUnit
+  // Chave recém-gerada, pela troca de chave ou pela reativação
+  const newKey = rotateKey.data ?? activate.data
 
   return (
     <>
@@ -51,7 +54,7 @@ export default function DeviceDetailPage() {
         title={device.macAddress}
         description={<DeviceSignal device={device} />}
         actions={
-          device.isActive && (
+          device.isActive ? (
             <>
               <Button asChild variant={unit ? 'outline' : 'default'}>
                 <Link to={`/vincular?mac=${encodeURIComponent(device.macAddress)}`}>
@@ -83,13 +86,28 @@ export default function DeviceDetailPage() {
                 />
               )}
             </>
+          ) : (
+            user?.role === 'MASTER' && (
+              <ConfirmDialog
+                trigger={
+                  <Button>
+                    <KeyRound aria-hidden />
+                    Reativar
+                  </Button>
+                }
+                title="Reativar esta placa?"
+                description="A placa volta sem vínculo e com uma chave nova, que aparece uma única vez. Cole a chave no portal de configuração da placa e vincule-a pelo QR Code."
+                confirmLabel="Reativar placa"
+                onConfirm={() => activate.mutate(device.id)}
+              />
+            )
           )
         }
       />
 
-      {rotateKey.data && (
+      {newKey && (
         <div className="mb-6 max-w-2xl">
-          <DeviceKeyNotice {...rotateKey.data} />
+          <DeviceKeyNotice {...newKey} />
         </div>
       )}
 

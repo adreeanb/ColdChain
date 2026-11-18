@@ -4,15 +4,16 @@ services:
   - type: web
     name: coldchain-api
     runtime: node
-    # Sempre ligado: no plano free o serviço dorme sem tráfego HTTP e para o MQTT, os jobs e o SSE
-    plan: starter
+    # Free: o serviço dorme após 15 min sem tráfego HTTP e para o MQTT, os jobs e o SSE.
+    # Mantenha-o acordado com um monitor de uptime em /health a cada 5 min (docs/DEPLOY.md).
+    plan: free
     # Mais perto do Supabase em us-east-1 (N. Virginia)
     region: virginia
     rootDir: api
-    # --include=dev: com NODE_ENV=production o npm pularia o prisma e o typescript, usados no build e nas migrations
+    # --include=dev: com NODE_ENV=production o npm pularia o prisma e o typescript, usados no build.
+    # Sem migrations aqui: o ambiente de build do Render não alcança o Supabase (P1001). Elas são
+    # aplicadas da máquina do desenvolvedor antes do deploy (docs/DEPLOY.md, seção 3).
     buildCommand: npm ci --include=dev && npm run build
-    # Só em planos pagos; no free, mova para o fim do buildCommand
-    preDeployCommand: npm run migrate:deploy
     startCommand: npm start
     healthCheckPath: /health
     # Uma única instância: o barramento de eventos (SSE) é em memória

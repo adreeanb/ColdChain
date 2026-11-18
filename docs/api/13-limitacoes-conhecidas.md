@@ -34,7 +34,6 @@ Pontos observados no código que estão incompletos, inconsistentes ou que repre
 | Jobs no mesmo processo | Limpeza da quarentena e detecção de placas sem sinal rodam com `setInterval` dentro do servidor |
 | Resolução sem autor | `resolvedAt` registra quando, mas não quem resolveu |
 | Mudança de limites não recalcula | Editar `minTemperature`/`maxTemperature` não altera episódios já gerados |
-| Placa não pode ser reativada | Existe `deactivate`, mas não há rota inversa |
 
 ## Resolvido desde a primeira versão desta documentação
 
@@ -44,6 +43,7 @@ Pontos observados no código que estão incompletos, inconsistentes ou que repre
 | Broker público (HiveMQ) | Mosquitto próprio no `docker-compose` |
 | Um alerta por leitura fora da faixa | Episódios: uma excursão gera um alerta |
 | Leituras repetidas duplicadas | Índice único `(placa, horário)` e `skipDuplicates` |
+| Placa desativada não podia voltar (nem ser recadastrada, pois o MAC é único) | `PATCH /devices/:id/activate`, com chave nova |
 | Último contato calculado de forma inconsistente | Coluna `lastSeenAt`, gravada na chegada de cada mensagem |
 | Sensor mudo sem alerta | Alerta `SENSOR_OFFLINE` pelo job de 1 minuto |
 | Mensagens perdidas com a API fora do ar | Sessão MQTT persistente: o broker guarda as mensagens |

@@ -15,7 +15,7 @@ stateDiagram-v2
     Vinculada --> SemVinculo: unbind ou unidade excluída
     SemVinculo --> Inativa: deactivate
     Vinculada --> Inativa: deactivate ou empresa excluída
-    Inativa --> [*]
+    Inativa --> SemVinculo: activate (MASTER) gera chave nova
 
     note right of Desconhecida: leituras descartadas
     note right of SemVinculo: leituras na quarentena
@@ -192,7 +192,20 @@ Depois disso, as leituras da placa voltam para a quarentena, e um alerta de plac
 
 Em transação: `isActive = false` e encerra o vínculo ativo. O histórico de leituras e vínculos é mantido; a placa só deixa de aceitar dados e novos vínculos. Placa inexistente ou já inativa → `400 "Placa não encontrada ou já desativada."`. Publica um evento `devices`.
 
-Não existe rota para reativar uma placa.
+O MAC continua ocupado: cadastrar o mesmo MAC de novo com `POST /devices` devolve `400 "Esta placa está desativada. Reative-a na página dela ou na lista de placas da empresa dona dela."`. Para voltar a usar a placa, reative-a.
+
+### Reativar placa — `PATCH /devices/:id/activate` (MASTER)
+
+`ActivateDeviceService`
+
+Volta `isActive = true` na **mesma empresa** e grava o hash de uma **chave nova**: a antiga pode ter se perdido ou vazado junto com a placa. A placa volta sem vínculo; as leituras caem na quarentena até um novo vínculo por QR Code.
+
+- Sucesso → `200 { deviceId, macAddress, deviceKey }`. Como no cadastro, a chave só aparece nesta resposta.
+- Placa inexistente ou já ativa → `400 "Placa não encontrada ou já ativa."`.
+- Empresa da placa excluída → `400 "A empresa desta placa foi excluída. Não é possível reativá-la."`.
+- Publica um evento `devices`.
+
+Trocar a placa de empresa não é suportado: o histórico de vínculos dela aponta para unidades da empresa antiga.
 
 ---
 

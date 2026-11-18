@@ -100,7 +100,7 @@ flowchart TD
 | Criar/editar/excluir unidades frias | | ✔ | ✔ |
 | Criar/editar/excluir usuários da empresa | | ✔ | ✔ |
 | Gerenciar empresas | | | ✔ |
-| Cadastrar e desativar placas, gerar nova chave | | | ✔ |
+| Cadastrar, desativar e reativar placas, gerar nova chave | | | ✔ |
 | Receber eventos em tempo real (`GET /events`) | ✔ (só a própria empresa) | ✔ (só a própria empresa) | ✔ (todas) |
 | Agir sobre outra empresa (usuários, listagem de placas) | | | ✔ |
 
