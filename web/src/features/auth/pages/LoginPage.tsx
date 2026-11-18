@@ -38,13 +38,6 @@ function LoginShowcase() {
       </svg>
 
       <div className="relative max-w-md p-10">
-        <span className="mb-8 flex size-24 items-center justify-center rounded-2xl bg-card shadow-lg">
-          <img src="/logo.png" alt="" className="size-16 object-contain" />
-        </span>
-        <h2 className="text-3xl font-semibold tracking-tight">Cadeia fria sob controle</h2>
-        <p className="mt-3 text-primary-foreground/80">
-          Acompanhe a temperatura das suas unidades em tempo real e saiba na hora quando algo precisa de atenção.
-        </p>
         <ul className="mt-8 grid gap-4">
           {highlights.map(({ icon: Icon, text }) => (
             <li key={text} className="flex items-center gap-3">
@@ -89,8 +82,7 @@ export default function LoginPage() {
         </div>
 
         <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-10">
-          <h1 className="text-3xl font-bold tracking-tight">Bem-vindo de volta</h1>
-          <p className="mt-2 mb-8 text-sm text-muted-foreground">Acompanhe a temperatura das suas unidades frias.</p>
+          <h1 className="text-3xl font-bold tracking-tight mb-8 ">Bem-vindo de volta</h1>
 
           <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 gap-5" noValidate>
             {error && (
