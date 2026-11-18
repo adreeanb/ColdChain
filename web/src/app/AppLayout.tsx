@@ -112,8 +112,8 @@ export function AppLayout() {
       </aside>
 
       <div className="min-w-0">
-        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-card px-4 lg:hidden">
-          <Brand />
+        {/* O botão fica à esquerda, do mesmo lado de onde o menu desliza */}
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-card px-2 lg:hidden">
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" aria-label="Abrir menu">
@@ -130,6 +130,7 @@ export function AppLayout() {
               </div>
             </SheetContent>
           </Sheet>
+          <Brand />
         </header>
 
         <main className="mx-auto w-full max-w-7xl p-4 md:p-6">

@@ -36,7 +36,10 @@ export function NativeSelect({ className, children, ...props }: ComponentProps<'
     <div className="relative">
       <select
         className={cn(
-          'border-input bg-transparent focus-visible:ring-ring/50 focus-visible:border-ring h-9 w-full appearance-none rounded-md border py-1 pr-9 pl-3 text-sm shadow-xs outline-none focus-visible:ring-[3px] disabled:opacity-50',
+          'border-input bg-transparent text-foreground focus-visible:ring-ring/50 focus-visible:border-ring h-9 w-full appearance-none rounded-md border py-1 pr-9 pl-3 text-sm shadow-xs outline-none focus-visible:ring-[3px] disabled:opacity-50 dark:bg-input/30',
+          // A lista aberta é desenhada pelo navegador: sem cor explícita, o Chrome no Windows usa fundo
+          // branco com o texto claro herdado do modo escuro, e as opções ficam ilegíveis
+          '[&_option]:bg-card [&_option]:text-card-foreground [&_option:disabled]:text-muted-foreground',
           className,
         )}
         {...props}
