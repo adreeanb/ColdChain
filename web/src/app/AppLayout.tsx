@@ -94,8 +94,7 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
 function Brand() {
   return (
     <span className="flex items-center gap-2 font-semibold">
-      <img src="/logo.png" alt="" className="size-7 object-contain" />
-      TCColdChain
+      ColdChain
     </span>
   )
 }
