@@ -112,6 +112,17 @@
   --color-status-critical: var(--status-critical);
 }
 
+/* Pisca em degraus, como um LED, sem transição suave */
+@theme {
+  --animate-blink: blink 1s steps(1, end) infinite;
+
+  @keyframes blink {
+    50% {
+      opacity: 0.35;
+    }
+  }
+}
+
 @layer base {
   * {
     border-color: var(--border);
