@@ -24,7 +24,7 @@ export function DotMatrix({ matrix, cell, blink = false, className }: DotMatrixP
       height={matrix.length * cell}
       className={cn('fill-current', className)}
     >
-      <path d={cellsPath(matrix, '.', INSET)} className="opacity-15" />
+      <path d={cellsPath(matrix, '.', INSET)} className="opacity-10 dark:opacity-15" />
       <g className={cn(blink && 'motion-safe:animate-blink')}>
         <path d={cellsPath(matrix, ':', INSET)} className="opacity-45" />
         <path d={cellsPath(matrix, '#', INSET)} />

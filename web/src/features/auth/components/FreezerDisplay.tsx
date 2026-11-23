@@ -34,12 +34,14 @@ export function FreezerDisplay() {
   const history = Array.from({ length: HISTORY_LENGTH }, (_, i) => DEMO_READINGS[(index - HISTORY_LENGTH + 1 + i + length) % length])
   const outOfRange = value > DEMO_RANGE.max || value < DEMO_RANGE.min
 
+  // Tema claro: display LCD (tela clara, pontos escuros, sem brilho). Tema escuro: LED aceso.
+  // Tudo por classes dark:, então trocar o tema não re-renderiza nem roda JS.
   return (
     <div
       aria-hidden
-      className="rounded-2xl bg-[color-mix(in_srgb,var(--primary)_14%,black)] p-6 shadow-2xl ring-1 ring-primary-foreground/10"
+      className="rounded-2xl bg-card p-6 text-card-foreground shadow-2xl ring-1 ring-black/5 dark:bg-[color-mix(in_srgb,var(--primary)_14%,black)] dark:text-primary-foreground dark:ring-primary-foreground/10"
     >
-      <div className="flex items-center justify-between font-mono text-xs tracking-widest text-primary-foreground/60 uppercase">
+      <div className="flex items-center justify-between font-mono text-xs tracking-widest text-muted-foreground uppercase dark:text-primary-foreground/60">
         <span>{COLD_UNIT_TYPE_LABELS.COLD_ROOM} 02</span>
         <span className="flex items-center gap-2">
           <span className="size-1.5 bg-current motion-safe:animate-blink" />
@@ -47,20 +49,26 @@ export function FreezerDisplay() {
         </span>
       </div>
 
-      <div className={cn('mt-6 flex justify-end', outOfRange ? 'text-status-critical' : 'text-primary-foreground')}>
+      <div className="mt-6 rounded-lg bg-[#dfe7ee] p-3 shadow-[inset_0_1px_4px_rgb(0_0_0/0.18)] dark:bg-transparent dark:p-0 dark:shadow-none">
+        <div className={cn('flex justify-end', outOfRange ? 'text-status-critical' : 'text-foreground dark:text-primary-foreground')}>
+          <DotMatrix
+            matrix={textToMatrix(formatDisplayTemperature(value))}
+            cell={8}
+            blink={outOfRange}
+            className="dark:drop-shadow-[0_0_6px_currentColor]"
+          />
+        </div>
+
         <DotMatrix
-          matrix={textToMatrix(formatDisplayTemperature(value))}
-          cell={8}
-          blink={outOfRange}
-          className="drop-shadow-[0_0_6px_currentColor]"
+          matrix={sparklineMatrix(history, SCALE)}
+          cell={6}
+          className="mt-6 h-auto w-full text-foreground/80 dark:text-primary-foreground/85"
         />
       </div>
 
-      <DotMatrix matrix={sparklineMatrix(history, SCALE)} cell={6} className="mt-6 h-auto w-full text-primary-foreground/85" />
-
       <div className="mt-5 flex items-center justify-between gap-4">
         <UnitStatusBadge status={outOfRange ? 'OUT_OF_RANGE' : 'NORMAL'} />
-        <span className="text-xs text-primary-foreground/60">
+        <span className="text-xs text-muted-foreground dark:text-primary-foreground/60">
           Faixa {formatTemperature(DEMO_RANGE.min)} a {formatTemperature(DEMO_RANGE.max)}
         </span>
       </div>

@@ -32,7 +32,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      <PageHeader title="Visão geral" description="Atualiza automaticamente a cada 15 segundos." />
+      <PageHeader title="Visão geral"/>
 
       {summary.isError && (
         <Alert variant="destructive" className="mb-4">

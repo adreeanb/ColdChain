@@ -6,6 +6,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0f172a" />
     <title>ColdChain Monitor</title>
+    <script>
+      // Aplica o tema antes da primeira pintura, para a tela não piscar no tema errado:
+      // a escolha salva pelo botão (chave THEME_KEY de src/shared/lib/theme.ts) ou, sem ela, a do sistema
+      ;(() => {
+        const media = matchMedia('(prefers-color-scheme: dark)')
+        const apply = () => {
+          let saved = null
+          try {
+            saved = localStorage.getItem('coldchain.theme')
+          } catch {}
+          document.documentElement.classList.toggle('dark', saved ? saved === 'dark' : media.matches)
+        }
+        apply()
+        media.addEventListener('change', apply)
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

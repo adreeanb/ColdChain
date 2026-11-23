@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '@/shared/ui/alert'
 import { Button } from '@/shared/ui/button'
 import { Field } from '@/shared/ui/form'
 import { Input } from '@/shared/ui/input'
+import { ThemeToggle } from '@/shared/ui/theme-toggle'
 import { LoginShowcase } from '../components/LoginShowcase'
 import { PixelSnow } from '../components/PixelSnow'
 import { useAuth } from '../hooks'
@@ -40,10 +41,12 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="relative grid min-h-dvh overflow-hidden bg-linear-to-br from-primary to-[color-mix(in_srgb,var(--primary)_65%,black)] text-primary-foreground lg:grid-cols-2">
+    <main className="relative grid min-h-dvh overflow-hidden bg-linear-to-br from-primary to-[color-mix(in_srgb,var(--primary)_65%,black)] text-primary-foreground dark:from-[color-mix(in_srgb,var(--primary)_35%,var(--background))] dark:to-[color-mix(in_srgb,var(--background)_70%,black)] lg:grid-cols-2">
       <PixelSnow className="absolute inset-0 size-full" />
+      <ThemeToggle className="absolute top-4 right-4 z-10 bg-primary-foreground/10 text-primary-foreground ring-1 ring-primary-foreground/20 backdrop-blur-md hover:bg-primary-foreground/20 focus-visible:ring-primary-foreground/60" />
 
-      <div className="relative flex items-center justify-center p-6 lg:p-10">
+      {/* pt-20 no celular para o card não encostar no botão de tema em telas baixas */}
+      <div className="relative flex items-center justify-center px-6 pt-20 pb-6 lg:p-10">
         <div className="w-full max-w-md rounded-2xl bg-background p-8 text-foreground shadow-2xl sm:p-10">
           <div className="flex items-center gap-2.5">
 

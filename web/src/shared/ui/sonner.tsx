@@ -1,9 +1,10 @@
 import { Toaster as Sonner, type ToasterProps } from 'sonner'
+import { useTheme } from '@/shared/lib/theme'
 
 export function Toaster(props: ToasterProps) {
   return (
     <Sonner
-      theme="system"
+      theme={useTheme()}
       richColors
       style={
         {

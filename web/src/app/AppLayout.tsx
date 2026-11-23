@@ -23,6 +23,7 @@ import { Button } from '@/shared/ui/button'
 import { LoadingState } from '@/shared/ui/page'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/shared/ui/sheet'
 import { Toaster } from '@/shared/ui/sonner'
+import { ThemeToggle } from '@/shared/ui/theme-toggle'
 import { useLiveEvents } from './useLiveEvents'
 
 interface NavItem {
@@ -78,10 +79,13 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
           <UserRound aria-hidden className="size-4" />
           <span className="truncate">{user?.name ?? 'Meu perfil'}</span>
         </NavLink>
-        <Button variant="ghost" className="h-10 justify-start gap-2.5 px-3" onClick={signOut}>
-          <LogOut aria-hidden className="size-4" />
-          Sair
-        </Button>
+        <div className="flex gap-1">
+          <Button variant="ghost" className="h-10 flex-1 justify-start gap-2.5 px-3" onClick={signOut}>
+            <LogOut aria-hidden className="size-4" />
+            Sair
+          </Button>
+          <ThemeToggle className="rounded-md hover:bg-accent dark:hover:bg-accent/50" />
+        </div>
       </div>
     </div>
   )
