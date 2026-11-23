@@ -2,9 +2,9 @@
 
 ## O que é
 
-Sistema de monitoramento da cadeia fria. Placas ESP32 com sensor de temperatura ficam instaladas em câmaras frias, depósitos refrigerados e caminhões baú. Elas enviam as leituras para uma API, que guarda o histórico e gera alertas quando a temperatura sai dos limites da unidade. Uma aplicação web mostra o painel, os gráficos e os alertas.
+Sistema de monitoramento da cadeia de frio. Placas ESP32 com sensor de temperatura ficam instaladas em câmaras frias, depósitos refrigerados e caminhões baú. Elas enviam as leituras para uma API, que guarda o histórico e gera alertas quando a temperatura sai dos limites da unidade. Uma aplicação web mostra o painel, os gráficos e os alertas.
 
-O sistema atende várias empresas ao mesmo tempo, e cada usuário só enxerga os dados da própria empresa.
+O sistema atende várias empresas ao mesmo tempo, e cada usuário só enxerga os dados da própria empresa. (SaaS)
 
 ## Visão geral
 
@@ -34,7 +34,7 @@ São três partes:
 - Identifica-se pelo **endereço MAC** da placa e assina cada mensagem com a **chave da placa**, gerada no cadastro: `{ key, temperatura, timestamp }`, com o horário em UTC obtido por NTP.
 - Publica no tópico `coldchain/devices/<MAC>/realtime` quando está conectada, num broker privado com usuário e senha: em produção a EMQX Cloud Serverless, com TLS; no desenvolvimento, o Mosquitto do `docker-compose`.
 - **Store-and-forward:** sem rede, grava as leituras na memória flash (SPIFFS). Quando a conexão volta, envia o histórico em lotes de 20 leituras por `coldchain/devices/<MAC>/historical`, sem travar as leituras ao vivo e preservando o horário original. Reenvios são ignorados pela API.
-- Um único firmware serve para todas as placas: o broker e a conta das placas ficam em `include/secrets.h` (fora do git). O Wi-Fi e a chave da placa são informados em campo, pelo celular, num portal de configuração aberto pela própria placa (rede `ColdChain-XXXXXX`), e ficam gravados na NVS do ESP32.
+- Um único firmware serve para todas as placas: o broker e a conta das placas ficam em `include/secrets.h`. O Wi-Fi e a chave da placa são informados em campo, pelo celular, num portal de configuração aberto pela própria placa (rede `ColdChain-XXXXXX`), e ficam gravados na NVS do ESP32.
 
 ## API (backend)
 
@@ -107,7 +107,7 @@ Para cada unidade, o painel mostra:
 
 ## Web (frontend)
 
-Aplicação React responsiva, instalável como PWA. Funciona no computador e no celular, onde a câmera lê o QR Code das placas.
+Aplicação React responsiva, instalável como PWA. Funciona no computador e no celular, onde a câmera pode ler o QR Code das placas para o vinculo com unidades.
 
 ### Organização
 
